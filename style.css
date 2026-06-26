@@ -125,13 +125,6 @@ body {
   object-fit: cover;
 }
 
-.app-header h1 {
-  font-size: 1.7rem;
-  font-weight: 850;
-  color: var(--text-dark);
-  margin-bottom: 6px;
-  letter-spacing: -0.5px;
-}
 
 .status-badge {
   display: inline-flex;
@@ -395,12 +388,6 @@ body {
   gap: 12px;
 }
 
-.controls-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
 .soda-control-group {
   display: flex;
@@ -852,6 +839,15 @@ body {
   font-size: 0.8rem;
   font-weight: 800;
   text-align: center;
+}
+
+.step-help-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: -8px;
+  margin-bottom: 16px;
+  line-height: 1.4;
 }
 
 /* --- Adaptación Responsiva para Celulares --- */

@@ -7,8 +7,11 @@ let selectedCurrency = "COP";
 
 // Inicialización de la aplicación
 document.addEventListener("DOMContentLoaded", () => {
-  // Configuración del header
-  document.getElementById("business-name").innerText = BUSINESS_SETTINGS.name;
+  // Configuración del footer (nombre dinámico del negocio)
+  const footerBusinessName = document.getElementById("footer-business-name");
+  if (footerBusinessName) {
+    footerBusinessName.innerText = BUSINESS_SETTINGS.name;
+  }
   document.getElementById("footer-year").innerText = new Date().getFullYear();
 
   // Verificar horario de la tienda
@@ -370,8 +373,10 @@ function setupEventListeners() {
   document.getElementById("btn-submit").addEventListener("click", submitOrder);
 
   // 5. Ocultar errores al escribir
-  document.getElementById("client-name").addEventListener("input", hideErrorMessage);
-  document.getElementById("client-address").addEventListener("input", hideErrorMessage);
+  const clientAddressInput = document.getElementById("client-address");
+  if (clientAddressInput) {
+    clientAddressInput.addEventListener("input", hideErrorMessage);
+  }
 
   // 6. Eliminar artículo desde la lista resumida (papelera)
   document.addEventListener("click", (e) => {
@@ -389,20 +394,22 @@ function setupEventListeners() {
 
       // Si la variante que acabamos de borrar es la que está activa actualmente en la tarjeta del producto,
       // actualizamos el contador en pantalla a 0
-      let activeKey = "";
-      if (product.isPizza) {
-        const size = activeVariants[productId] || "PEQ";
-        activeKey = `${productId}_${size}`;
-      } else if (product.isSoda) {
-        const size = activeVariants[productId].size;
-        const flavor = activeVariants[productId].flavor;
-        activeKey = `${productId}_${size}_${flavor}`;
-      } else {
-        activeKey = `${productId}_DEFAULT`;
-      }
+      if (product) {
+        let activeKey = "";
+        if (product.isPizza) {
+          const size = activeVariants[productId] || "PEQ";
+          activeKey = `${productId}_${size}`;
+        } else if (product.isSoda) {
+          const size = activeVariants[productId].size;
+          const flavor = activeVariants[productId].flavor;
+          activeKey = `${productId}_${size}_${flavor}`;
+        } else {
+          activeKey = `${productId}_DEFAULT`;
+        }
 
-      if (activeKey === key) {
-        document.getElementById(`qty-val-${productId}`).innerText = "0";
+        if (activeKey === key) {
+          document.getElementById(`qty-val-${productId}`).innerText = "0";
+        }
       }
 
       updateCardSelectedState(productId);
@@ -539,31 +546,20 @@ function updateTotals() {
 
 // Validar y enviar pedido a WhatsApp
 function submitOrder() {
-  const nameInput = document.getElementById("client-name");
   const addressInput = document.getElementById("client-address");
   const notesInput = document.getElementById("order-notes");
-  const errorMessage = document.getElementById("error-message");
 
-  const clientName = nameInput.value.trim();
   const clientAddress = addressInput.value.trim();
   const orderNotes = notesInput ? notesInput.value.trim() : "";
 
-  // 1. Validar nombre
-  if (!clientName) {
-    showError("⚠️ Por favor, introduce tu nombre para continuar.");
-    nameInput.focus();
-    nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
-
-  // 2. Validar que haya productos
+  // 1. Validar que haya productos
   const cartSize = Object.keys(cart).length;
   if (cartSize === 0) {
     showError("⚠️ El carrito está vacío. Por favor agrega al menos una pizza o bebida.");
     return;
   }
 
-  // 3. Validar dirección/indicaciones
+  // 2. Validar dirección/indicaciones
   if (!clientAddress) {
     showError("⚠️ Por favor, escribe las indicaciones o dirección para la entrega.");
     addressInput.focus();
@@ -617,9 +613,8 @@ function submitOrder() {
   const grandTotal = subtotal + boxTotal + deliveryCost;
 
   // Armado del mensaje de WhatsApp
-  let msg = `📱 *NUEVO PEDIDO - ${BUSINESS_SETTINGS.name}*\n`;
+  let msg = `📱 *NUEVO PEDIDO*\n`;
   msg += `-----------------------------------------\n\n`;
-  msg += `👤 *Cliente:* ${clientName}\n`;
   msg += `📍 *Dirección / Indicaciones:* ${clientAddress}\n`;
   if (orderNotes) {
     msg += `📝 *Instrucciones Especiales:* ${orderNotes}\n`;
@@ -631,7 +626,7 @@ function submitOrder() {
   if (boxTotal > 0) {
     msg += `📦 *Cajas de Pizza:* ${formatCOP(boxTotal)}\n`;
   }
-  msg += `🛵 *Envío en Moto:* ${formatCOP(deliveryCost)}\n`;
+  msg += `*Delivery:* ${formatCOP(deliveryCost)}\n`;
   msg += `💵 *Total a Pagar:* ${formatCOP(grandTotal)}\n\n`;
 
   // Información del método de pago

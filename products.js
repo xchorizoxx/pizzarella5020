@@ -161,7 +161,7 @@ const PRODUCTS = [
     name: "Pizza Puglia",
     category: "comida",
     subCategory: "Especiales",
-    description: "Salsa de la casa, mozarella, anchoas, pepperoni, aceitunas.",
+    description: "Salsa de la casa, mozzarella, anchoas, pepperoni, aceitunas.",
     logo: "logos/pizza_3.png",
     isPizza: true,
     variants: [
@@ -193,7 +193,7 @@ const PRODUCTS = [
     name: "Cono Pizza",
     category: "comida",
     subCategory: "Especiales",
-    description: "Salsa de la casa, mozarella, pollo, tocineta, pimentón. (Solo Fines de Semana)",
+    description: "Salsa de la casa, mozzarella, pollo, tocineta, pimentón. (Solo Fines de Semana)",
     logo: "logos/pizza_1.png",
     price: 6000,
     isPizza: false

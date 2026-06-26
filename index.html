@@ -30,55 +30,42 @@
       <div class="logo-container">
         <img src="logos/logo_pizzarella.png" alt="Pizzarella5020 Logo" class="logo-img-header">
       </div>
-      <h1 id="business-name">Pizzarella5020</h1>
       <div class="status-badge">
         <span class="pulse-dot"></span> Abierto • Pedidos por WhatsApp
       </div>
-      <p class="header-subtitle">Elige tus pizzas y refrescos, escribe tu dirección y te lo enviamos en moto 🛵</p>
+      <p class="header-subtitle">Elige tus pizzas y refrescos, escribe tu dirección y te lo enviamos por Delivery 🛵</p>
     </header>
 
     <main class="app-main">
       
-      <!-- PASO 1: Tu Nombre -->
-      <section class="step-card" id="step-name">
-        <div class="step-header">
-          <span class="step-number">1</span>
-          <h2>¿Cómo te llamas?</h2>
-        </div>
-        <div class="step-body">
-          <div class="input-group">
-            <span class="input-icon">👤</span>
-            <input type="text" id="client-name" placeholder="Escribe tu nombre y apellido..." autocomplete="name">
-          </div>
-        </div>
-      </section>
-
-      <!-- PASO 2: Las Pizzas -->
+      <!-- PASO 1: Las Pizzas -->
       <section class="step-card" id="step-food">
         <div class="step-header">
-          <span class="step-number">2</span>
+          <span class="step-number">1</span>
           <h2>Elige tus Pizzas 🍕</h2>
         </div>
+        <p class="step-help-text">💡 Puedes agregar varios tamaños de una misma pizza: elige un tamaño, presiona (+) y repite con otro.</p>
         <div class="products-grid" id="food-container">
           <!-- Cargado dinámicamente con JS -->
         </div>
       </section>
 
-      <!-- PASO 3: Las Bebidas -->
+      <!-- PASO 2: Las Bebidas -->
       <section class="step-card" id="step-drinks">
         <div class="step-header">
-          <span class="step-number">3</span>
+          <span class="step-number">2</span>
           <h2>Elige tus Bebidas 🥤</h2>
         </div>
+        <p class="step-help-text">💡 Puedes combinar refrescos: elige tamaño y sabor, presiona (+) y repite con otra combinación. Para agua, solo presiona (+).</p>
         <div class="products-grid" id="drinks-container">
           <!-- Cargado dinámicamente con JS -->
         </div>
       </section>
 
-      <!-- PASO 4: Notas o comentarios adicionales -->
+      <!-- PASO 3: Notas o comentarios adicionales -->
       <section class="step-card" id="step-notes">
         <div class="step-header">
-          <span class="step-number">4</span>
+          <span class="step-number">3</span>
           <h2>¿Alguna indicación especial? 📝</h2>
         </div>
         <div class="step-body">
@@ -89,10 +76,10 @@
         </div>
       </section>
 
-      <!-- PASO 5: Dirección o Comentarios -->
+      <!-- PASO 4: Dirección o Comentarios -->
       <section class="step-card" id="step-delivery">
         <div class="step-header">
-          <span class="step-number">5</span>
+          <span class="step-number">4</span>
           <h2>¿A dónde lo enviamos? 📍</h2>
         </div>
         <div class="step-body">
@@ -106,7 +93,7 @@
       <!-- Resumen del Pedido (Paso final) -->
       <section class="step-card summary-card">
         <div class="step-header">
-          <span class="step-number">6</span>
+          <span class="step-number">5</span>
           <h2>Resumen de tu Pedido</h2>
         </div>
         
@@ -125,7 +112,7 @@
             <span id="summary-boxes">0 COP</span>
           </div>
           <div class="summary-row">
-            <span>Envío en Moto:</span>
+            <span>Delivery:</span>
             <span id="summary-delivery">0 COP</span>
           </div>
           <hr class="summary-divider">
@@ -167,7 +154,7 @@
     </main>
 
     <footer class="app-footer">
-      <p>© <span id="footer-year">2026</span> - Pizzarella5020</p>
+      <p>© <span id="footer-year">2026</span> - <span id="footer-business-name">Pizzarella5020</span></p>
       <p class="footer-ig">📸 Síguenos en Instagram: <a href="https://instagram.com/pizzarella5020" target="_blank">@pizzarella5020</a></p>
     </footer>
 
