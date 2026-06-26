@@ -1,9 +1,11 @@
 /* --- Variables de Diseño y Paleta de Colores --- */
 :root {
-  --primary: #d32f2f; /* Rojo Pizzería Clásico */
+  --primary: #d32f2f;
+  /* Rojo Pizzería Clásico */
   --primary-hover: #b71c1c;
   --primary-light: #ffebee;
-  --success: #25d366; /* Verde WhatsApp */
+  --success: #25d366;
+  /* Verde WhatsApp */
   --success-hover: #128c7e;
   --success-light: #e8f9ee;
   --bg-body: #f1f3f6;
@@ -43,7 +45,8 @@ body {
 /* --- Simulador Móvil en Computadoras --- */
 .app-container {
   width: 100%;
-  max-width: 480px; /* Tamaño móvil estándar */
+  max-width: 480px;
+  /* Tamaño móvil estándar */
   min-height: 100vh;
   background-color: #f8fafc;
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.1);
@@ -59,37 +62,43 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #ffffff;
+  background-color: #faf6ee;
+  /* Fondo crema cálido a juego con la pizza */
   z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: opacity 0.5s ease, visibility 0.5s ease;
+  transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.6s ease;
 }
 
 .loader-content {
   text-align: center;
+  width: 90%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.loader-ring {
-  width: 60px;
-  height: 60px;
-  border: 5px solid var(--border-color);
-  border-top: 5px solid var(--primary);
-  border-radius: 50%;
-  margin: 0 auto 20px;
-  animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+.loader-content svg {
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  margin-bottom: 15px;
+}
+
+.ingredient {
+  opacity: 0;
 }
 
 .loader-text {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #8c2525;
+  /* Rojo oscuro para combinar con el logo y branding */
+  margin-top: 10px;
+  font-family: var(--font-family);
+  letter-spacing: -0.5px;
 }
 
 .loader-overlay.fade-out {
@@ -158,9 +167,17 @@ body {
 }
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(37, 211, 102, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(37, 211, 102, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+  }
 }
 
 .header-subtitle {
@@ -399,7 +416,8 @@ body {
 .soda-control-label {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #64748b; /* slate-500 */
+  color: #64748b;
+  /* slate-500 */
   text-transform: uppercase;
   letter-spacing: 0.05em;
   text-align: left;
@@ -434,7 +452,8 @@ body {
 
 .btn-flavor {
   border: 1px solid var(--border-color);
-  background-color: #e2e8f0; /* Gris ligeramente más oscuro/azulado */
+  background-color: #e2e8f0;
+  /* Gris ligeramente más oscuro/azulado */
   color: var(--text-dark);
   font-family: var(--font-family);
   font-size: 0.72rem;
@@ -455,7 +474,8 @@ body {
 }
 
 .btn-flavor.active {
-  background-color: #f59e0b !important; /* Ámbar/Dorado */
+  background-color: #f59e0b !important;
+  /* Ámbar/Dorado */
   color: #ffffff !important;
   border-color: #d97706 !important;
   transform: scale(1.05);
@@ -504,7 +524,8 @@ body {
   min-width: 36px;
   height: 32px;
   padding: 0 10px;
-  border-radius: 16px; /* Forma de píldora */
+  border-radius: 16px;
+  /* Forma de píldora */
   font-size: 0.75rem;
 }
 
@@ -617,11 +638,27 @@ body {
 }
 
 @keyframes slideDownShake {
-  0% { opacity: 0; transform: translate(-50%, -20px); }
-  60% { opacity: 1; transform: translate(-50%, 0); }
-  75% { transform: translate(-52%, 0); }
-  90% { transform: translate(-48%, 0); }
-  100% { transform: translate(-50%, 0); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  75% {
+    transform: translate(-52%, 0);
+  }
+
+  90% {
+    transform: translate(-48%, 0);
+  }
+
+  100% {
+    transform: translate(-50%, 0);
+  }
 }
 
 /* --- Botón WhatsApp --- */
@@ -835,6 +872,17 @@ body {
   font-size: 1.6rem;
 }
 
+.payment-icon-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-delivery-option.active .payment-icon-img {
+  transform: scale(1.1);
+}
+
 .payment-text {
   font-size: 0.8rem;
   font-weight: 800;
@@ -879,13 +927,19 @@ body {
   transform: translateY(-2px);
 }
 
+/* --- FIX: Zonas muertas en botones --- */
+/* Previene que imágenes, spans o gaps de flexbox dentro del botón roben o ignoren el click */
+button * {
+  pointer-events: none;
+}
+
 /* --- Adaptación Responsiva para Celulares --- */
 @media (max-width: 480px) {
   body {
     background: #f8fafc;
     padding: 0;
   }
-  
+
   .app-container {
     box-shadow: none;
     min-height: 100vh;

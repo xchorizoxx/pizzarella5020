@@ -7,16 +7,32 @@ let selectedCurrency = "COP";
 let selectedDeliveryMethod = "delivery";
 
 // Inicialización de la aplicación
+let loaderTimeout;
+
 document.addEventListener("DOMContentLoaded", () => {
   // Configuración del footer (nombre dinámico del negocio)
   const footerBusinessName = document.getElementById("footer-business-name");
   if (footerBusinessName) {
     footerBusinessName.innerText = BUSINESS_SETTINGS.name;
   }
-  document.getElementById("footer-year").innerText = new Date().getFullYear();
+  const footerYear = document.getElementById("footer-year");
+  if (footerYear) {
+    footerYear.innerText = new Date().getFullYear();
+  }
+
+  // Configurar temporizador de seguridad para ocultar pantalla de carga
+  const loader = document.getElementById("loader");
+  if (loader) {
+    loaderTimeout = setTimeout(hideLoader, 3500); // 3.5 segundos de respaldo
+  }
 
   // Verificar horario de la tienda
-  checkStoreStatus();
+  try {
+    checkStoreStatus();
+    setInterval(checkStoreStatus, 60000); // Check every minute
+  } catch (e) {
+    console.error("Error al verificar el horario de la tienda:", e);
+  }
 
   // Renderizar catálogo
   renderPizzas();
@@ -24,22 +40,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Escuchadores de eventos
   setupEventListeners();
-  
+
   // Actualizar totales inicialmente
   updateTotals();
+
+  // Inicializar animación de carga de pizza
+  initPizzaLoader();
 });
 
 // Verificar si la tienda está abierta (Hora de Venezuela UTC-4)
 function checkStoreStatus() {
-  const now = new Date();
-  
-  // Convertir de forma confiable a la zona horaria de Caracas usando la API del navegador
-  const vvzTimeString = now.toLocaleString("en-US", { timeZone: "America/Caracas" });
-  const vvzTime = new Date(vvzTimeString);
-  
-  const day = vvzTime.getDay(); // 0: Dom, 1: Lun, 2: Mar, 3: Mie, 4: Jue, 5: Vie, 6: Sab
-  const hour = vvzTime.getHours();
-  const minute = vvzTime.getMinutes();
+  let vvzTime;
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Caracas",
+      hour12: false,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric"
+    });
+    const parts = formatter.formatToParts(new Date());
+    const partValues = {};
+    parts.forEach(p => partValues[p.type] = p.value);
+
+    const year = parseInt(partValues.year, 10);
+    const month = parseInt(partValues.month, 10) - 1;
+    const day = parseInt(partValues.day, 10);
+    const hour = parseInt(partValues.hour, 10);
+    const minute = parseInt(partValues.minute, 10);
+    const second = parseInt(partValues.second, 10);
+
+    vvzTime = new Date(Date.UTC(year, month, day, hour, minute, second));
+  } catch (err) {
+    console.warn("Fallo al obtener zona horaria de Caracas con formatToParts, usando cálculo manual UTC-4:", err);
+    // Fallback: Calcular manualmente hora de Venezuela (UTC-4)
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    vvzTime = new Date(utc + (3600000 * -4));
+  }
+
+  const day = vvzTime.getUTCDay(); // 0: Dom, 1: Lun, 2: Mar, 3: Mie, 4: Jue, 5: Vie, 6: Sab
+  const hour = vvzTime.getUTCHours();
+  const minute = vvzTime.getUTCMinutes();
   const currentTime = hour + (minute / 60);
 
   let isOpen = false;
@@ -72,12 +117,27 @@ function checkStoreStatus() {
   }
 }
 
+// Función para ocultar la pantalla de carga de forma segura
+function hideLoader() {
+  const loader = document.getElementById("loader");
+  if (loader && !loader.classList.contains("fade-out")) {
+    loader.classList.add("fade-out");
+    if (loaderTimeout) {
+      clearTimeout(loaderTimeout);
+    }
+    // Asegurar que no intercepte clicks ocultándolo del todo después de la animación de CSS (0.6s)
+    setTimeout(() => {
+      loader.style.display = "none";
+    }, 600);
+  }
+}
+
 // Ocultar pantalla de carga al finalizar de cargar todos los recursos
 window.addEventListener("load", () => {
-  const loader = document.getElementById("loader");
-  if (loader) {
-    loader.classList.add("fade-out");
-  }
+  const timeElapsed = performance.now();
+  const minWaitTime = 2000; // 2 segundos mínimo para evitar parpadeos
+  const timeToWait = Math.max(0, minWaitTime - timeElapsed);
+  setTimeout(hideLoader, timeToWait);
 });
 
 // Formateador de moneda COP (Pesos Colombianos)
@@ -100,7 +160,7 @@ function renderPizzas() {
   };
 
   allComidas.forEach(p => {
-    if (groups[p.subCategory]) {
+    if (p.subCategory && groups[p.subCategory]) {
       groups[p.subCategory].items.push(p);
     }
   });
@@ -121,13 +181,14 @@ function renderPizzas() {
       let badgeHtml = "";
 
       if (pizza.isPizza) {
-        // Por defecto, la variante activa inicial es PEQ
-        activeVariants[pizza.id] = "PEQ";
+        // Por defecto, la variante activa inicial es la primera disponible
+        const defaultSize = pizza.variants[0].size;
+        activeVariants[pizza.id] = defaultSize;
 
         // Construcción del selector de tamaño (P, M, F, EF)
         let sizeButtonsHtml = "";
         pizza.variants.forEach(v => {
-          const isActive = v.size === "PEQ" ? "active" : "";
+          const isActive = v.size === defaultSize ? "active" : "";
           sizeButtonsHtml += `
             <button type="button" class="btn-size ${isActive}" data-id="${pizza.id}" data-size="${v.size}">
               ${v.label}
@@ -160,8 +221,8 @@ function renderPizzas() {
         `;
       }
 
-      const priceText = pizza.isPizza 
-        ? formatCOP(pizza.variants.find(v => v.size === "PEQ").price)
+      const priceText = pizza.isPizza
+        ? formatCOP(pizza.variants[0].price)
         : formatCOP(pizza.price);
 
       const pizzaHtml = `
@@ -198,30 +259,36 @@ function renderDrinks() {
     let controlsHtml = "";
 
     if (drink.isSoda) {
-      // Por defecto, inicializamos la variante en BOTELLA y Coca-Cola
-      activeVariants[drink.id] = { size: "BOTELLA", flavor: "Coca-Cola" };
+      // Por defecto, inicializamos la variante con la primera talla y sabor disponible
+      const defaultSize = (drink.variants && drink.variants[0]) ? drink.variants[0].size : "BOTELLA";
+      const defaultFlavor = (drink.flavors && drink.flavors[0]) ? drink.flavors[0].name : "Coca-Cola";
+      activeVariants[drink.id] = { size: defaultSize, flavor: defaultFlavor };
 
       // Botones de tamaños de gaseosa (Botella, 1L, etc.) en forma de píldora
       let sizeButtonsHtml = "";
-      drink.variants.forEach(v => {
-        const isActive = v.size === "BOTELLA" ? "active" : "";
-        sizeButtonsHtml += `
-          <button type="button" class="btn-size ${isActive}" data-id="${drink.id}" data-size="${v.size}" id="btn-size-${drink.id}-${v.size}">
-            ${v.label}
-          </button>
-        `;
-      });
+      if (drink.variants) {
+        drink.variants.forEach(v => {
+          const isActive = v.size === defaultSize ? "active" : "";
+          sizeButtonsHtml += `
+            <button type="button" class="btn-size ${isActive}" data-id="${drink.id}" data-size="${v.size}" id="btn-size-${drink.id}-${v.size}">
+              ${v.label}
+            </button>
+          `;
+        });
+      }
 
       // Botones de sabores de refrescos
       let flavorButtonsHtml = "";
-      drink.flavors.forEach(f => {
-        const isActive = f.name === "Coca-Cola" ? "active" : "";
-        flavorButtonsHtml += `
-          <button type="button" class="btn-flavor ${isActive}" data-id="${drink.id}" data-flavor="${f.name}">
-            ${f.name}
-          </button>
-        `;
-      });
+      if (drink.flavors) {
+        drink.flavors.forEach(f => {
+          const isActive = f.name === defaultFlavor ? "active" : "";
+          flavorButtonsHtml += `
+            <button type="button" class="btn-flavor ${isActive}" data-id="${drink.id}" data-flavor="${f.name}">
+              ${f.name}
+            </button>
+          `;
+        });
+      }
 
       controlsHtml = `
         <div class="soda-control-group">
@@ -259,8 +326,8 @@ function renderDrinks() {
     }
 
     const drinkLogo = drink.isSoda ? drink.flavors[0].logo : drink.logo;
-    const priceText = drink.isSoda 
-      ? formatCOP(drink.variants.find(v => v.size === "BOTELLA").price)
+    const priceText = drink.isSoda
+      ? formatCOP(drink.variants[0].price)
       : formatCOP(drink.price);
 
     const drinkHtml = `
@@ -283,7 +350,11 @@ function renderDrinks() {
 
     container.insertAdjacentHTML("beforeend", drinkHtml);
   });
-  updateSodaSizesVisibility("refresco");
+
+  // Actualizar visibilidad de tamaños según el sabor inicial de cada soda
+  drinks.forEach(drink => {
+    if (drink.isSoda) updateSodaSizesVisibility(drink.id);
+  });
 }
 
 // Actualizar la visibilidad de los tamaños de gaseosa según el sabor elegido
@@ -292,7 +363,7 @@ function updateSodaSizesVisibility(productId) {
   if (!product || !product.isSoda) return;
 
   const currentFlavor = activeVariants[productId].flavor;
-  const allowedFlavorsFor2_5L = ["Coca-Cola", "Uva", "Piña"];
+  const allowedFlavorsFor2_5L = ["Coca-Cola", "Pepsi", "Manzana"];
 
   const button2_5L = document.getElementById(`btn-size-${productId}-2.5L`);
   if (button2_5L) {
@@ -315,9 +386,10 @@ function updateSodaSizesVisibility(productId) {
 function setupEventListeners() {
   // 1. Clic en los botones de tamaño (pizzas y refrescos)
   document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("btn-size")) {
-      const productId = e.target.getAttribute("data-id");
-      const size = e.target.getAttribute("data-size");
+    const btnSize = e.target.closest(".btn-size");
+    if (btnSize) {
+      const productId = btnSize.getAttribute("data-id");
+      const size = btnSize.getAttribute("data-size");
       const product = PRODUCTS.find(p => p.id === productId);
 
       // Quitar clase activa de los otros botones de este producto y agregar al seleccionado
@@ -325,7 +397,7 @@ function setupEventListeners() {
       card.querySelectorAll(".btn-size").forEach(btn => {
         btn.classList.remove("active");
       });
-      e.target.classList.add("active");
+      btnSize.classList.add("active");
 
       let cartKey = "";
       let price = 0;
@@ -354,9 +426,10 @@ function setupEventListeners() {
 
   // 2. Clic en los botones de sabores de refrescos
   document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("btn-flavor")) {
-      const productId = e.target.getAttribute("data-id");
-      const flavorName = e.target.getAttribute("data-flavor");
+    const btnFlavor = e.target.closest(".btn-flavor");
+    if (btnFlavor) {
+      const productId = btnFlavor.getAttribute("data-id");
+      const flavorName = btnFlavor.getAttribute("data-flavor");
       const product = PRODUCTS.find(p => p.id === productId);
 
       // Actualizar sabor activo
@@ -367,7 +440,7 @@ function setupEventListeners() {
       card.querySelectorAll(".btn-flavor").forEach(btn => {
         btn.classList.remove("active");
       });
-      e.target.classList.add("active");
+      btnFlavor.classList.add("active");
 
       // Actualizar imagen del logo según el sabor elegido
       const flavorData = product.flavors.find(f => f.name === flavorName);
@@ -390,11 +463,13 @@ function setupEventListeners() {
 
   // 3. Botones de + y - para agregar/quitar del carrito
   document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("btn-plus")) {
-      const productId = e.target.getAttribute("data-id");
+    const btnPlus = e.target.closest(".btn-plus");
+    const btnMinus = e.target.closest(".btn-minus");
+    if (btnPlus) {
+      const productId = btnPlus.getAttribute("data-id");
       adjustQuantity(productId, 1);
-    } else if (e.target.classList.contains("btn-minus")) {
-      const productId = e.target.getAttribute("data-id");
+    } else if (btnMinus) {
+      const productId = btnMinus.getAttribute("data-id");
       adjustQuantity(productId, -1);
     }
   });
@@ -410,9 +485,9 @@ function setupEventListeners() {
 
   // 6. Eliminar artículo desde la lista resumida (papelera)
   document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("btn-delete-item") || e.target.closest(".btn-delete-item")) {
-      const btn = e.target.classList.contains("btn-delete-item") ? e.target : e.target.closest(".btn-delete-item");
-      const key = btn.getAttribute("data-key");
+    const btnDelete = e.target.closest(".btn-delete-item");
+    if (btnDelete) {
+      const key = btnDelete.getAttribute("data-key");
 
       // Eliminar del carrito
       delete cart[key];
@@ -480,28 +555,32 @@ function setupEventListeners() {
 // Modificar cantidad de la variante activa de un producto
 function adjustQuantity(productId, change) {
   const product = PRODUCTS.find(p => p.id === productId);
+  if (!product) return;
   let cartKey = "";
 
   if (product.isPizza) {
     const size = activeVariants[productId] || "PEQ";
     cartKey = `${productId}_${size}`;
   } else if (product.isSoda) {
-    const size = activeVariants[productId].size;
-    const flavor = activeVariants[productId].flavor;
+    const variantObj = activeVariants[productId] || {};
+    const size = variantObj.size || "BOTELLA";
+    const flavor = variantObj.flavor || "Coca-Cola";
     cartKey = `${productId}_${size}_${flavor}`;
   } else {
     cartKey = `${productId}_DEFAULT`;
   }
-  
+
   const currentQty = cart[cartKey] || 0;
   const newQty = currentQty + change;
 
   if (newQty <= 0) {
     delete cart[cartKey];
-    document.getElementById(`qty-val-${productId}`).innerText = "0";
+    const qtyElement = document.getElementById(`qty-val-${productId}`);
+    if (qtyElement) qtyElement.innerText = "0";
   } else {
     cart[cartKey] = newQty;
-    document.getElementById(`qty-val-${productId}`).innerText = newQty;
+    const qtyElement = document.getElementById(`qty-val-${productId}`);
+    if (qtyElement) qtyElement.innerText = newQty;
   }
 
   updateCardSelectedState(productId);
@@ -511,7 +590,8 @@ function adjustQuantity(productId, change) {
 // Actualizar si una tarjeta de producto se muestra seleccionada en el UI
 function updateCardSelectedState(productId) {
   const card = document.getElementById(`product-${productId}`);
-  
+  if (!card) return;
+
   // Sumamos la cantidad de todas las variantes de este producto
   let totalQty = 0;
   Object.keys(cart).forEach(key => {
@@ -530,6 +610,7 @@ function updateCardSelectedState(productId) {
 let errorTimeout;
 function showError(msg) {
   const errorMessage = document.getElementById("error-message");
+  if (!errorMessage) return;
   errorMessage.innerText = msg;
   errorMessage.style.display = "block";
   clearTimeout(errorTimeout);
@@ -539,7 +620,8 @@ function showError(msg) {
 }
 
 function hideErrorMessage() {
-  document.getElementById("error-message").style.display = "none";
+  const errorMessage = document.getElementById("error-message");
+  if (errorMessage) errorMessage.style.display = "none";
 }
 
 // Calcular totales de productos, cajas y delivery
@@ -560,20 +642,25 @@ function updateTotals() {
       if (product) {
         if (product.isPizza) {
           const size = parts[1];
-          const sizeVariant = product.variants.find(v => v.size === size);
-          if (sizeVariant) {
-            subtotal += sizeVariant.price * qty;
-            boxTotal += BOX_PRICES[size] * qty; // Cajas de pizza según tamaño
+          if (product.variants) {
+            const sizeVariant = product.variants.find(v => v.size === size);
+            if (sizeVariant) {
+              subtotal += (sizeVariant.price || 0) * qty;
+              const boxPrice = BOX_PRICES[size] || 0;
+              boxTotal += boxPrice * qty; // Cajas de pizza según tamaño
+            }
           }
         } else if (product.isSoda) {
           const size = parts[1];
-          const sizeVariant = product.variants.find(v => v.size === size);
-          if (sizeVariant) {
-            subtotal += sizeVariant.price * qty;
+          if (product.variants) {
+            const sizeVariant = product.variants.find(v => v.size === size);
+            if (sizeVariant) {
+              subtotal += (sizeVariant.price || 0) * qty;
+            }
           }
         } else {
           // Agua o Cono Pizza
-          subtotal += product.price * qty;
+          subtotal += (product.price || 0) * qty;
         }
       }
     }
@@ -592,7 +679,6 @@ function updateTotals() {
     document.getElementById("summary-delivery").innerText = formatCOP(deliveryCost);
   }
   document.getElementById("summary-total").innerText = formatCOP(total);
-
   // Renderizar la lista resumida del carrito
   renderMiniCart();
 }
@@ -602,12 +688,17 @@ function submitOrder() {
   const addressInput = document.getElementById("client-address");
   const notesInput = document.getElementById("order-notes");
 
-  const clientAddress = addressInput.value.trim();
+  const clientAddress = addressInput ? addressInput.value.trim() : "";
   const orderNotes = notesInput ? notesInput.value.trim() : "";
 
   // 1. Validar que haya productos
-  const cartSize = Object.keys(cart).length;
-  if (cartSize === 0) {
+  let totalItems = 0;
+  Object.keys(cart).forEach(key => {
+    if (cart[key] > 0) {
+      totalItems += cart[key];
+    }
+  });
+  if (totalItems === 0) {
     showError("⚠️ El carrito está vacío. Por favor agrega al menos una pizza o bebida.");
     return;
   }
@@ -615,8 +706,10 @@ function submitOrder() {
   // 2. Validar dirección/indicaciones (solo si es Delivery)
   if (selectedDeliveryMethod === "delivery" && !clientAddress) {
     showError("⚠️ Por favor, escribe las indicaciones o dirección para la entrega.");
-    addressInput.focus();
-    addressInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (addressInput) {
+      addressInput.focus();
+      addressInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     return;
   }
 
@@ -637,25 +730,30 @@ function submitOrder() {
     if (product && qty > 0) {
       if (product.isPizza) {
         const size = parts[1];
-        const sizeVariant = product.variants.find(v => v.size === size);
-        if (sizeVariant) {
-          const itemTotal = sizeVariant.price * qty;
-          subtotal += itemTotal;
-          boxTotal += BOX_PRICES[size] * qty;
+        if (product.variants) {
+          const sizeVariant = product.variants.find(v => v.size === size);
+          if (sizeVariant) {
+            const itemTotal = (sizeVariant.price || 0) * qty;
+            subtotal += itemTotal;
+            const boxPrice = BOX_PRICES[size] || 0;
+            boxTotal += boxPrice * qty;
 
-          itemsText += `• ${qty} Pizza ${product.name.replace("Pizza ", "")} (${size}) - _${formatCOP(itemTotal)}_\n`;
+            itemsText += `• ${qty} Pizza ${product.name.replace("Pizza ", "")} (${size}) - _${formatCOP(itemTotal)}_\n`;
+          }
         }
       } else if (product.isSoda) {
         const size = parts[1];
         const flavor = parts[2];
-        const sizeVariant = product.variants.find(v => v.size === size);
-        if (sizeVariant) {
-          const itemTotal = sizeVariant.price * qty;
-          subtotal += itemTotal;
-          itemsText += `• ${qty} Refresco ${size} (${flavor}) - _${formatCOP(itemTotal)}_\n`;
+        if (product.variants) {
+          const sizeVariant = product.variants.find(v => v.size === size);
+          if (sizeVariant) {
+            const itemTotal = (sizeVariant.price || 0) * qty;
+            subtotal += itemTotal;
+            itemsText += `• ${qty} Refresco ${size} (${flavor}) - _${formatCOP(itemTotal)}_\n`;
+          }
         }
       } else {
-        const itemTotal = product.price * qty;
+        const itemTotal = (product.price || 0) * qty;
         subtotal += itemTotal;
         itemsText += `• ${qty} ${product.name} - _${formatCOP(itemTotal)}_\n`;
       }
@@ -680,7 +778,7 @@ function submitOrder() {
   msg += `\n`;
   msg += `🛒 *Detalle del Pedido:*\n`;
   msg += itemsText + `\n`;
-  
+
   if (boxTotal > 0) {
     msg += `📦 *Cajas de Pizza:* ${formatCOP(boxTotal)}\n`;
   }
@@ -709,7 +807,8 @@ function submitOrder() {
   const encodedText = encodeURIComponent(msg);
   const whatsappUrl = `https://wa.me/${BUSINESS_SETTINGS.phone}?text=${encodedText}`;
 
-  window.open(whatsappUrl, '_blank');
+  // Usar window.location.href para evitar bloqueadores de popups
+  window.location.href = whatsappUrl;
 }
 
 // Renderizar la lista simplificada del carrito en el resumen (Paso 5) con la papelera
@@ -735,22 +834,26 @@ function renderMiniCart() {
 
       if (product.isPizza) {
         const size = parts[1];
-        const sizeVariant = product.variants.find(v => v.size === size);
-        if (sizeVariant) {
-          desc = `${qty}x Pizza ${product.name.replace("Pizza ", "")} (${sizeVariant.size})`;
-          price = sizeVariant.price * qty;
+        if (product.variants) {
+          const sizeVariant = product.variants.find(v => v.size === size);
+          if (sizeVariant) {
+            desc = `${qty}x Pizza ${product.name.replace("Pizza ", "")} (${sizeVariant.size})`;
+            price = (sizeVariant.price || 0) * qty;
+          }
         }
       } else if (product.isSoda) {
         const size = parts[1];
         const flavor = parts[2];
-        const sizeVariant = product.variants.find(v => v.size === size);
-        if (sizeVariant) {
-          desc = `${qty}x Refresco ${size} [${flavor}]`;
-          price = sizeVariant.price * qty;
+        if (product.variants) {
+          const sizeVariant = product.variants.find(v => v.size === size);
+          if (sizeVariant) {
+            desc = `${qty}x Refresco ${size} [${flavor}]`;
+            price = (sizeVariant.price || 0) * qty;
+          }
         }
       } else {
         desc = `${qty}x ${product.name}`;
-        price = product.price * qty;
+        price = (product.price || 0) * qty;
       }
 
       html += `
@@ -772,4 +875,139 @@ function renderMiniCart() {
     container.innerHTML = "";
     container.style.display = "none";
   }
+}
+
+// Inicializar la animación de carga premium de la pizza (con GSAP)
+function initPizzaLoader() {
+  if (typeof gsap === "undefined") {
+    console.error("GSAP no está cargado");
+    return;
+  }
+
+  gsap.config({ trialWarn: false });
+
+  const select = s => document.querySelector(s);
+  const toArray = s => gsap.utils.toArray(s);
+  const pizzaSpinDuration = 4;
+  const pizzaBase = select('#pizzaBase');
+  if (!pizzaBase) return;
+  const allIngredients = toArray('.ingredient');
+  const allMushrooms = toArray('.mushroom');
+  const allSalami = toArray('.salami');
+  const allOlive = toArray('.olive');
+  const allPeppers = toArray('.pepper');
+
+  gsap.set('svg', {
+    visibility: 'visible'
+  });
+
+  const pizzaProp = gsap.getProperty('#pizzaBase');
+
+  function addToPizza(el) {
+    const pizzaRot = pizzaProp('rotation');
+    gsap.set(el, {
+      rotation: 360 - pizzaRot,
+      svgOrigin: '400 300'
+    });
+    pizzaBase.appendChild(el);
+  }
+
+  function reset() {
+    allIngredients.forEach((c) => {
+      const ingredientGroup = select('#ingredientGroup');
+      if (ingredientGroup) {
+        ingredientGroup.appendChild(c);
+      }
+      gsap.set(c, {
+        rotation: 0,
+        y: 0
+      });
+    });
+    gsap.set('#egg .eggBits', {
+      scale: 0,
+      svgOrigin: '400 300'
+    });
+    gsap.set('#eggShine', {
+      opacity: 0
+    });
+  }
+
+  const tl = gsap.timeline({ repeat: -1, onRepeat: reset });
+
+  tl.to('#pizzaBase', {
+    duration: pizzaSpinDuration,
+    rotation: -360,
+    repeat: 2,
+    svgOrigin: '400 300',
+    ease: 'none'
+  })
+    .to('#egg', {
+      duration: pizzaSpinDuration,
+      rotation: -360,
+      repeat: 2,
+      ease: 'none'
+    }, 0)
+    .to(allMushrooms, {
+      duration: 1.2,
+      opacity: 1,
+      y: '+=158',
+      stagger: {
+        each: pizzaSpinDuration / allMushrooms.length,
+        onComplete: function () {
+          addToPizza(this.targets()[0]);
+        }
+      },
+      ease: 'power3.in'
+    }, 0.47)
+    .to(allPeppers, {
+      opacity: 1,
+      y: '+=200',
+      stagger: {
+        each: pizzaSpinDuration / allPeppers.length,
+        onComplete: function () {
+          addToPizza(this.targets()[0]);
+        }
+      },
+      ease: 'power1.in'
+    }, 1)
+    .to(allSalami, {
+      opacity: 1,
+      y: '+=152',
+      stagger: {
+        each: pizzaSpinDuration / allSalami.length,
+        onComplete: function () {
+          addToPizza(this.targets()[0]);
+        }
+      },
+      ease: 'power3.in'
+    }, 1.5)
+    .to(allOlive, {
+      opacity: 1,
+      y: '+=180',
+      stagger: {
+        each: pizzaSpinDuration / allOlive.length,
+        onComplete: function () {
+          addToPizza(this.targets()[0]);
+        }
+      },
+      ease: 'power3.in'
+    }, 0.78)
+    .to('#egg .eggBits', {
+      duration: 1,
+      scale: 1,
+      stagger: {
+        amount: 0.2
+      },
+      ease: 'elastic(0.6, 0.5)'
+    }, '-=4')
+    .to('#eggShine', {
+      opacity: 0.6,
+    }, '-=3.65')
+    .to('.ingredient, #egg, #eggShine', {
+      opacity: 0
+    }, '-=0.5');
+
+  gsap.globalTimeline.timeScale(1.25);
+  reset();
+  tl.progress(0.1); // Adelantar la línea de tiempo al 10% al iniciar para evitar retrasos
 }

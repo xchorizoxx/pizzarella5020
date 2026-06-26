@@ -18,9 +18,9 @@ const BOX_PRICES = {
 // Sabores de refrescos disponibles ordenados alfabéticamente
 const SODA_FLAVORS = [
   { name: "Coca-Cola", logo: "logos/soda_3.png" },
+  { name: "Pepsi", logo: "logos/soda_5.png" },
   { name: "Colita", logo: "logos/soda_11.png" },
   { name: "Manzana", logo: "logos/soda_7.png" },
-  { name: "Pepsi", logo: "logos/soda_5.png" },
   { name: "Piña", logo: "logos/soda_12.png" },
   { name: "Uva", logo: "logos/soda_1.png" }
 ];
