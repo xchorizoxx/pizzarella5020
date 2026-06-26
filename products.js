@@ -7,6 +7,14 @@ const BUSINESS_SETTINGS = {
   deliveryFee: 4000
 };
 
+// Precios globales de cajas de pizza según su tamaño
+const BOX_PRICES = {
+  "PEQ": 1500,
+  "MED": 1800,
+  "FAM": 2500,
+  "EXT": 2500
+};
+
 // Sabores de refrescos disponibles ordenados alfabéticamente
 const SODA_FLAVORS = [
   { name: "Coca-Cola", logo: "logos/soda_3.png" },
@@ -28,10 +36,10 @@ const PRODUCTS = [
     logo: "logos/pizza_1.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 13000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 17000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 28000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 34000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 13000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 17000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 28000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 34000 }
     ]
   },
   {
@@ -43,10 +51,10 @@ const PRODUCTS = [
     logo: "logos/pizza_2.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 17000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 22000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 38000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 44000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 17000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 22000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 38000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 44000 }
     ]
   },
   {
@@ -58,10 +66,10 @@ const PRODUCTS = [
     logo: "logos/pizza_6.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 19000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 24000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 37000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 43000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 19000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 24000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 37000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 43000 }
     ]
   },
   {
@@ -73,10 +81,10 @@ const PRODUCTS = [
     logo: "logos/pizza_7.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 19000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 24000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 42000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 48000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 19000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 24000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 42000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 48000 }
     ]
   },
   {
@@ -88,10 +96,10 @@ const PRODUCTS = [
     logo: "logos/pizza_3.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 20000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 25000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 38000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 44000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 20000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 25000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 38000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 44000 }
     ]
   },
 
@@ -105,10 +113,10 @@ const PRODUCTS = [
     logo: "logos/pizza_5.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 22000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 27000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 45000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 51000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 22000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 27000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 45000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 51000 }
     ]
   },
   {
@@ -120,10 +128,10 @@ const PRODUCTS = [
     logo: "logos/pizza_4.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 24000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 32000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 55000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 61000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 24000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 32000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 55000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 61000 }
     ]
   },
   {
@@ -135,10 +143,10 @@ const PRODUCTS = [
     logo: "logos/pizza_8.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 20000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 25000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 40000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 46000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 20000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 25000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 40000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 46000 }
     ]
   },
   {
@@ -150,10 +158,10 @@ const PRODUCTS = [
     logo: "logos/pizza_9.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 24000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 32000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 55000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 61000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 24000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 32000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 55000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 61000 }
     ]
   },
   {
@@ -165,10 +173,10 @@ const PRODUCTS = [
     logo: "logos/pizza_3.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 20000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 28000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 45000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 51000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 20000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 28000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 45000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 51000 }
     ]
   },
   {
@@ -180,10 +188,10 @@ const PRODUCTS = [
     logo: "logos/pizza_2.png",
     isPizza: true,
     variants: [
-      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 28000, boxPrice: 1500 },
-      { size: "MED", label: "M", name: "MED (30CM)", price: 38000, boxPrice: 1800 },
-      { size: "FAM", label: "F", name: "FAM (40CM)", price: 60000, boxPrice: 2500 },
-      { size: "EXT", label: "EF", name: "EXT FAM", price: 66000, boxPrice: 2500 }
+      { size: "PEQ", label: "P", name: "PEQ (24CM)", price: 28000 },
+      { size: "MED", label: "M", name: "MED (30CM)", price: 38000 },
+      { size: "FAM", label: "F", name: "FAM (40CM)", price: 60000 },
+      { size: "EXT", label: "EF", name: "EXT FAM", price: 66000 }
     ]
   },
   

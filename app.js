@@ -514,7 +514,7 @@ function updateTotals() {
           const sizeVariant = product.variants.find(v => v.size === size);
           if (sizeVariant) {
             subtotal += sizeVariant.price * qty;
-            boxTotal += sizeVariant.boxPrice * qty; // Cajas de pizza según tamaño
+            boxTotal += BOX_PRICES[size] * qty; // Cajas de pizza según tamaño
           }
         } else if (product.isSoda) {
           const size = parts[1];
@@ -588,7 +588,7 @@ function submitOrder() {
         if (sizeVariant) {
           const itemTotal = sizeVariant.price * qty;
           subtotal += itemTotal;
-          boxTotal += sizeVariant.boxPrice * qty;
+          boxTotal += BOX_PRICES[size] * qty;
 
           itemsText += `• ${qty} Pizza ${product.name.replace("Pizza ", "")} (${size}) - _${formatCOP(itemTotal)}_\n`;
         }
@@ -647,7 +647,7 @@ function submitOrder() {
   const encodedText = encodeURIComponent(msg);
   const whatsappUrl = `https://wa.me/${BUSINESS_SETTINGS.phone}?text=${encodedText}`;
 
-  window.location.href = whatsappUrl;
+  window.open(whatsappUrl, '_blank');
 }
 
 // Renderizar la lista simplificada del carrito en el resumen (Paso 5) con la papelera
