@@ -142,9 +142,7 @@ function renderPizzas() {
           </div>
         `;
 
-        const badgeClass = pizza.subCategory === "Básicas" ? "badge-basica" : "badge-especial";
-        const badgeText = pizza.subCategory === "Básicas" ? "Básica" : "Especial";
-        badgeHtml = `<span class="pizza-badge ${badgeClass}">${badgeText}</span>`;
+        // Las etiquetas de Básica o Especial ya no se mostrarán al lado del nombre
       } else {
         // Para cono pizza
         activeVariants[pizza.id] = "DEFAULT";
@@ -169,7 +167,7 @@ function renderPizzas() {
               <img src="${pizza.logo}" alt="${pizza.name}" class="product-logo-img" id="logo-${pizza.id}">
             </div>
             <div class="product-info">
-              <h3 class="product-name">${pizza.name} ${badgeHtml}</h3>
+              <h3 class="product-name">${pizza.name}</h3>
               <p class="product-description">${pizza.description}</p>
               <span class="product-price-label" id="price-label-${pizza.id}">${priceText}</span>
             </div>
