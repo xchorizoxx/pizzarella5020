@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pizzarella5020 - Menú Digital</title>
+  
+  <!-- Tipografía Premium de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Enlace al archivo CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Pantalla de carga (Loader Screen) -->
+  <div id="loader" class="loader-overlay">
+    <div class="loader-content">
+      <div class="loader-ring"></div>
+      <p class="loader-text">Abriendo el Menú... 🍕✨</p>
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- Encabezado de la tienda con logo circular -->
+    <header class="app-header">
+      <div class="logo-container">
+        <img src="logos/logo_pizzarella.png" alt="Pizzarella5020 Logo" class="logo-img-header">
+      </div>
+      <h1 id="business-name">Pizzarella5020</h1>
+      <div class="status-badge">
+        <span class="pulse-dot"></span> Abierto • Pedidos por WhatsApp
+      </div>
+      <p class="header-subtitle">Elige tus pizzas y refrescos, escribe tu dirección y te lo enviamos en moto 🛵</p>
+    </header>
+
+    <main class="app-main">
+      
+      <!-- PASO 1: Tu Nombre -->
+      <section class="step-card" id="step-name">
+        <div class="step-header">
+          <span class="step-number">1</span>
+          <h2>¿Cómo te llamas?</h2>
+        </div>
+        <div class="step-body">
+          <div class="input-group">
+            <span class="input-icon">👤</span>
+            <input type="text" id="client-name" placeholder="Escribe tu nombre y apellido..." autocomplete="name">
+          </div>
+        </div>
+      </section>
+
+      <!-- PASO 2: Las Pizzas -->
+      <section class="step-card" id="step-food">
+        <div class="step-header">
+          <span class="step-number">2</span>
+          <h2>Elige tus Pizzas 🍕</h2>
+        </div>
+        <div class="products-grid" id="food-container">
+          <!-- Cargado dinámicamente con JS -->
+        </div>
+      </section>
+
+      <!-- PASO 3: Las Bebidas -->
+      <section class="step-card" id="step-drinks">
+        <div class="step-header">
+          <span class="step-number">3</span>
+          <h2>Elige tus Bebidas 🥤</h2>
+        </div>
+        <div class="products-grid" id="drinks-container">
+          <!-- Cargado dinámicamente con JS -->
+        </div>
+      </section>
+
+      <!-- PASO 4: Notas o comentarios adicionales -->
+      <section class="step-card" id="step-notes">
+        <div class="step-header">
+          <span class="step-number">4</span>
+          <h2>¿Alguna indicación especial? 📝</h2>
+        </div>
+        <div class="step-body">
+          <div class="textarea-group">
+            <span class="textarea-icon">💬</span>
+            <textarea id="order-notes" rows="2" placeholder="Ejemplo: Poca salsa, mitad sin cebolla, refresco bien frío..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- PASO 5: Dirección o Comentarios -->
+      <section class="step-card" id="step-delivery">
+        <div class="step-header">
+          <span class="step-number">5</span>
+          <h2>¿A dónde lo enviamos? 📍</h2>
+        </div>
+        <div class="step-body">
+          <div class="textarea-group">
+            <span class="textarea-icon">🏠</span>
+            <textarea id="client-address" rows="3" placeholder="Escribe tu dirección, color de casa, local comercial o indicaciones de cómo llegar..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Resumen del Pedido (Paso final) -->
+      <section class="step-card summary-card">
+        <div class="step-header">
+          <span class="step-number">6</span>
+          <h2>Resumen de tu Pedido</h2>
+        </div>
+        
+        <!-- Lista resumida de artículos en el carrito -->
+        <div class="cart-items-list" id="cart-items-list" style="display: none;">
+          <!-- Cargado dinámicamente con JS -->
+        </div>
+
+        <div class="summary-details">
+          <div class="summary-row">
+            <span>Productos:</span>
+            <span id="summary-subtotal">0 COP</span>
+          </div>
+          <div class="summary-row">
+            <span>Cajas de Pizza:</span>
+            <span id="summary-boxes">0 COP</span>
+          </div>
+          <div class="summary-row">
+            <span>Envío en Moto:</span>
+            <span id="summary-delivery">0 COP</span>
+          </div>
+          <hr class="summary-divider">
+          <div class="summary-row total-row">
+            <span>Total a Pagar:</span>
+            <span id="summary-total">0 COP</span>
+          </div>
+        </div>
+
+        <!-- Método de Pago -->
+        <div class="payment-section">
+          <h3 class="payment-title">¿Cómo vas a pagar? 💵</h3>
+          <div class="payment-options">
+            <button type="button" class="btn-payment active" data-currency="COP">
+              <span class="payment-icon">🇨🇴</span>
+              <span class="payment-text">Pesos COP</span>
+            </button>
+            <button type="button" class="btn-payment" data-currency="USD">
+              <span class="payment-icon">💵</span>
+              <span class="payment-text">Dólares USD</span>
+            </button>
+            <button type="button" class="btn-payment" data-currency="BS">
+              <span class="payment-icon">💸</span>
+              <span class="payment-text">Bolívares (Bs)</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="error-message" class="error-toast" style="display: none;">
+          ⚠️ Por favor, introduce tu nombre para continuar.
+        </div>
+
+        <button type="button" id="btn-submit" class="btn-whatsapp">
+          <span>Hacer Pedido por WhatsApp</span>
+          <span class="btn-whatsapp-icon">📱</span>
+        </button>
+      </section>
+
+    </main>
+
+    <footer class="app-footer">
+      <p>© <span id="footer-year">2026</span> - Pizzarella5020</p>
+      <p class="footer-ig">📸 Síguenos en Instagram: <a href="https://instagram.com/pizzarella5020" target="_blank">@pizzarella5020</a></p>
+    </footer>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="products.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,832 @@
+/* --- Variables de Diseño y Paleta de Colores --- */
+:root {
+  --primary: #d32f2f; /* Rojo Pizzería Clásico */
+  --primary-hover: #b71c1c;
+  --primary-light: #ffebee;
+  --success: #25d366; /* Verde WhatsApp */
+  --success-hover: #128c7e;
+  --success-light: #e8f9ee;
+  --bg-body: #f1f3f6;
+  --bg-card: #ffffff;
+  --text-dark: #1a202c;
+  --text-muted: #718096;
+  --border-color: #edf2f7;
+  --font-family: 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --card-radius: 24px;
+  --btn-radius: 14px;
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-active: 0 15px 30px -5px rgba(211, 47, 47, 0.12);
+}
+
+/* --- Reseteo de Estilos Básicos --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-body);
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* Degradado sutil de fondo en computadoras */
+  background: radial-gradient(circle at 50% 50%, #f7f9fc 0%, #cbd5e1 100%);
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* --- Simulador Móvil en Computadoras --- */
+.app-container {
+  width: 100%;
+  max-width: 480px; /* Tamaño móvil estándar */
+  min-height: 100vh;
+  background-color: #f8fafc;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* --- Pantalla de Carga (Loader) --- */
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.loader-content {
+  text-align: center;
+}
+
+.loader-ring {
+  width: 60px;
+  height: 60px;
+  border: 5px solid var(--border-color);
+  border-top: 5px solid var(--primary);
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.loader-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loader-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* --- Encabezado --- */
+.app-header {
+  padding: 30px 20px 25px;
+  text-align: center;
+  background-color: var(--bg-card);
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.logo-container {
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid var(--primary);
+  background-color: #ffffff;
+  box-shadow: 0 8px 20px rgba(211, 47, 47, 0.15);
+}
+
+.logo-img-header {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-header h1 {
+  font-size: 1.7rem;
+  font-weight: 850;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--success-light);
+  color: var(--success-hover);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 50px;
+  margin-bottom: 12px;
+}
+
+.status-badge.closed {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--success);
+  border-radius: 50%;
+  animation: pulse 1.8s infinite;
+}
+
+.pulse-dot.closed {
+  background-color: #ef4444;
+  animation: none;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
+.header-subtitle {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  padding: 0 10px;
+}
+
+/* --- Main Layout --- */
+.app-main {
+  flex: 1;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- Estilo de las Tarjetas Paso a Paso --- */
+.step-card {
+  background-color: var(--bg-card);
+  border-radius: var(--card-radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.step-number {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.step-header h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+/* --- Paso 1: Input del Nombre --- */
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 1.2rem;
+  pointer-events: none;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--btn-radius);
+  font-family: var(--font-family);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  outline: none;
+  background-color: #fafbfc;
+  transition: all 0.2s ease;
+}
+
+.input-group input:focus {
+  border-color: var(--primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.08);
+}
+
+/* --- Paso 4: Dirección y Comentarios --- */
+.textarea-group {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.textarea-icon {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  font-size: 1.2rem;
+  pointer-events: none;
+}
+
+.textarea-group textarea {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--btn-radius);
+  font-family: var(--font-family);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  outline: none;
+  background-color: #fafbfc;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+.textarea-group textarea:focus {
+  border-color: var(--primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.08);
+}
+
+/* --- Cuadrícula de Productos --- */
+.products-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --- Tarjeta del Producto --- */
+.product-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  background-color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+/* Indicador visual cuando el producto tiene cantidad > 0 */
+.product-item.selected {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  box-shadow: var(--shadow-active);
+}
+
+.product-top-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.product-img-frame {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  background-color: #f7f9fc;
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.product-item.selected .product-img-frame {
+  background-color: #ffffff;
+  transform: scale(1.05);
+}
+
+.product-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-info {
+  flex: 1;
+}
+
+.product-name {
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+
+.product-description {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+
+.product-price-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+/* --- Controles inferiores (Variantes y Cantidad) --- */
+.product-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.product-item.selected .product-controls {
+  border-top-color: rgba(211, 47, 47, 0.15);
+}
+
+/* --- Selector de Sabores de Gaseosas (Botones) --- */
+.vertical-controls {
+  display: flex;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 12px;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.flavor-selector-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.btn-flavor {
+  border: 1px solid var(--border-color);
+  background-color: #e2e8f0; /* Gris ligeramente más oscuro/azulado */
+  color: var(--text-dark);
+  font-family: var(--font-family);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-flavor:hover {
+  background-color: #cbd5e1;
+}
+
+.product-item.selected .btn-flavor {
+  background-color: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.btn-flavor.active {
+  background-color: #f59e0b !important; /* Ámbar/Dorado */
+  color: #ffffff !important;
+  border-color: #d97706 !important;
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.25);
+}
+
+/* --- Selector de Tamaños de Pizza --- */
+.size-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-size {
+  border: 1px solid var(--border-color);
+  background-color: #f1f3f6;
+  color: var(--text-dark);
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 800;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-item.selected .btn-size {
+  background-color: #ffffff;
+  border-color: rgba(211, 47, 47, 0.2);
+}
+
+.btn-size.active {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(211, 47, 47, 0.2);
+}
+
+/* --- Ajuste para los tamaños de gaseosa (Botella, 1L, etc) --- */
+.soda-sizes .btn-size {
+  width: auto;
+  min-width: 36px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 16px; /* Forma de píldora */
+  font-size: 0.75rem;
+}
+
+/* --- Control de Cantidad (+ / -) --- */
+.qty-controller {
+  display: flex;
+  align-items: center;
+  background-color: #f1f3f6;
+  border-radius: 50px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.product-item.selected .qty-controller {
+  background-color: rgba(211, 47, 47, 0.15);
+}
+
+.btn-qty {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  transition: background-color 0.15s ease;
+}
+
+.btn-qty:active {
+  background-color: rgba(0, 0, 0, 0.08);
+  transform: scale(0.9);
+}
+
+.product-item.selected .btn-qty:active {
+  background-color: rgba(211, 47, 47, 0.25);
+}
+
+.qty-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  min-width: 22px;
+  text-align: center;
+}
+
+/* --- Resumen y Totales --- */
+.summary-card {
+  border-left: 4px solid var(--primary);
+}
+
+.summary-details {
+  background-color: #f8fafc;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border-color);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.summary-divider {
+  border: 0;
+  border-top: 1px dashed var(--border-color);
+  margin: 6px 0;
+}
+
+.total-row {
+  font-size: 1.15rem;
+  color: var(--text-dark);
+  font-weight: 850;
+}
+
+.total-row span:last-child {
+  color: var(--primary);
+  font-size: 1.35rem;
+}
+
+/* --- Alerta de Error --- */
+.error-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 10px 25px rgba(197, 48, 48, 0.2);
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  color: #c53030;
+  padding: 12px 14px;
+  border-radius: var(--btn-radius);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  animation: slideDownShake 0.4s ease forwards;
+}
+
+@keyframes slideDownShake {
+  0% { opacity: 0; transform: translate(-50%, -20px); }
+  60% { opacity: 1; transform: translate(-50%, 0); }
+  75% { transform: translate(-52%, 0); }
+  90% { transform: translate(-48%, 0); }
+  100% { transform: translate(-50%, 0); }
+}
+
+/* --- Botón WhatsApp --- */
+.btn-whatsapp {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--success);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--btn-radius);
+  font-family: var(--font-family);
+  font-size: 1.1rem;
+  font-weight: 850;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 20px rgba(37, 211, 102, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-whatsapp:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.15);
+  background-color: var(--success-hover);
+}
+
+.btn-whatsapp-icon {
+  font-size: 1.3rem;
+}
+
+/* --- Footer --- */
+.app-footer {
+  text-align: center;
+  padding: 15px 0 25px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+/* --- Lista de Resumen en la Cuenta (Carrito) --- */
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: #f1f3f6;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.cart-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+}
+
+.cart-item-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.cart-item-desc {
+  font-weight: 700;
+  color: var(--text-dark);
+  font-size: 0.88rem;
+}
+
+.cart-item-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cart-item-price {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.btn-delete-item {
+  border: none;
+  background: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-item:active {
+  background-color: rgba(211, 47, 47, 0.1);
+  transform: scale(0.9);
+}
+
+/* --- Membretes y Etiquetas de Categoría (Básica / Especial) --- */
+.subcategory-header {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1.2px;
+  margin: 22px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pizza-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+}
+
+.badge-basica {
+  background-color: #f1f3f6;
+  color: #4a5568;
+  border: 1px solid #cbd5e1;
+}
+
+.badge-especial {
+  background-color: #fffaf0;
+  color: #c05621;
+  border: 1px solid #feebc8;
+}
+
+.footer-ig {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.footer-ig a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 750;
+  transition: opacity 0.2s ease;
+}
+
+.footer-ig a:hover {
+  opacity: 0.8;
+}
+
+/* --- Selector de Método de Pago --- */
+.payment-section {
+  margin-bottom: 24px;
+}
+
+.payment-title {
+  font-size: 0.98rem;
+  font-weight: 850;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+}
+
+.payment-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.btn-payment {
+  background-color: #f1f3f6;
+  border: 1px solid var(--border-color);
+  border-radius: var(--btn-radius);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-family);
+  color: var(--text-dark);
+}
+
+.btn-payment:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-payment.active {
+  background-color: #ffffff !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  font-weight: 800;
+  box-shadow: var(--shadow-active);
+  transform: translateY(-2px);
+}
+
+.payment-icon {
+  font-size: 1.6rem;
+}
+
+.payment-text {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* --- Adaptación Responsiva para Celulares --- */
+@media (max-width: 480px) {
+  body {
+    background: #f8fafc;
+    padding: 0;
+  }
+  
+  .app-container {
+    box-shadow: none;
+    min-height: 100vh;
+  }
+}
