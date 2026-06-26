@@ -850,6 +850,35 @@ body {
   line-height: 1.4;
 }
 
+.btn-delivery-option {
+  background-color: #f1f3f6;
+  border: 1px solid var(--border-color);
+  border-radius: var(--btn-radius);
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-family);
+  color: var(--text-dark);
+}
+
+.btn-delivery-option:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-delivery-option.active {
+  background-color: #ffffff !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  font-weight: 800;
+  box-shadow: var(--shadow-active);
+  transform: translateY(-2px);
+}
+
 /* --- Adaptación Responsiva para Celulares --- */
 @media (max-width: 480px) {
   body {

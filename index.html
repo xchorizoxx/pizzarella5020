@@ -77,16 +77,29 @@
         </div>
       </section>
 
-      <!-- PASO 4: Dirección o Comentarios -->
+      <!-- PASO 4: Método de Entrega y Dirección -->
       <section class="step-card" id="step-delivery">
         <div class="step-header">
           <span class="step-number">4</span>
-          <h2>¿A dónde lo enviamos? 📍</h2>
+          <h2>¿Cómo quieres recibir tu pedido? 📍</h2>
         </div>
         <div class="step-body">
-          <div class="textarea-group">
-            <span class="textarea-icon">🏠</span>
-            <textarea id="client-address" rows="3" placeholder="Escribe tu dirección, color de casa, local comercial o indicaciones de cómo llegar..."></textarea>
+          <div class="delivery-options-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <button type="button" class="btn-delivery-option active" data-method="delivery">
+              <span class="payment-icon">🛵</span>
+              <span class="payment-text">Delivery</span>
+            </button>
+            <button type="button" class="btn-delivery-option" data-method="pickup">
+              <span class="payment-icon">🛍️</span>
+              <span class="payment-text">Retiro en Tienda</span>
+            </button>
+          </div>
+          
+          <div id="address-container" style="display: block;">
+            <div class="textarea-group">
+              <span class="textarea-icon">🏠</span>
+              <textarea id="client-address" rows="3" placeholder="Escribe tu dirección, color de casa, local comercial o indicaciones de cómo llegar..."></textarea>
+            </div>
           </div>
         </div>
       </section>

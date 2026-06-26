@@ -4,6 +4,7 @@
 const cart = {}; // Almacena { "productId_variant": cantidad } o { "productId_size_flavor": cantidad }
 const activeVariants = {}; // Almacena { "productId": "size" } o { "productId": { size: "size", flavor: "flavor" } }
 let selectedCurrency = "COP";
+let selectedDeliveryMethod = "delivery";
 
 // Inicialización de la aplicación
 document.addEventListener("DOMContentLoaded", () => {
@@ -205,7 +206,7 @@ function renderDrinks() {
       drink.variants.forEach(v => {
         const isActive = v.size === "BOTELLA" ? "active" : "";
         sizeButtonsHtml += `
-          <button type="button" class="btn-size ${isActive}" data-id="${drink.id}" data-size="${v.size}">
+          <button type="button" class="btn-size ${isActive}" data-id="${drink.id}" data-size="${v.size}" id="btn-size-${drink.id}-${v.size}">
             ${v.label}
           </button>
         `;
@@ -282,6 +283,32 @@ function renderDrinks() {
 
     container.insertAdjacentHTML("beforeend", drinkHtml);
   });
+  updateSodaSizesVisibility("refresco");
+}
+
+// Actualizar la visibilidad de los tamaños de gaseosa según el sabor elegido
+function updateSodaSizesVisibility(productId) {
+  const product = PRODUCTS.find(p => p.id === productId);
+  if (!product || !product.isSoda) return;
+
+  const currentFlavor = activeVariants[productId].flavor;
+  const allowedFlavorsFor2_5L = ["Coca-Cola", "Uva", "Piña"];
+
+  const button2_5L = document.getElementById(`btn-size-${productId}-2.5L`);
+  if (button2_5L) {
+    if (allowedFlavorsFor2_5L.includes(currentFlavor)) {
+      button2_5L.style.display = "inline-flex";
+    } else {
+      button2_5L.style.display = "none";
+      // Si la opción seleccionada actualmente era 2.5L, la cambiamos a 2L
+      if (activeVariants[productId].size === "2.5L") {
+        const button2L = document.getElementById(`btn-size-${productId}-2L`);
+        if (button2L) {
+          button2L.click();
+        }
+      }
+    }
+  }
 }
 
 // Configurar escuchadores de eventos
@@ -347,6 +374,9 @@ function setupEventListeners() {
       if (flavorData) {
         document.getElementById(`logo-${productId}`).src = flavorData.logo;
       }
+
+      // Actualizar visibilidad de tamaños de refresco según el sabor elegido
+      updateSodaSizesVisibility(productId);
 
       // Actualizar cantidad mostrada en pantalla para este sabor y tamaño
       const currentSize = activeVariants[productId].size;
@@ -424,6 +454,25 @@ function setupEventListeners() {
       paymentButtons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       selectedCurrency = btn.getAttribute("data-currency");
+    });
+  });
+
+  // 8. Clic en los botones de método de entrega (Delivery / Pickup)
+  const deliveryButtons = document.querySelectorAll(".btn-delivery-option");
+  deliveryButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      deliveryButtons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedDeliveryMethod = btn.getAttribute("data-method");
+
+      const addressContainer = document.getElementById("address-container");
+      if (selectedDeliveryMethod === "delivery") {
+        addressContainer.style.display = "block";
+      } else {
+        addressContainer.style.display = "none";
+      }
+
+      updateTotals();
     });
   });
 }
@@ -531,13 +580,17 @@ function updateTotals() {
   });
 
   // Costo del delivery
-  const deliveryCost = hasItems ? BUSINESS_SETTINGS.deliveryFee : 0;
+  const deliveryCost = (hasItems && selectedDeliveryMethod === "delivery") ? BUSINESS_SETTINGS.deliveryFee : 0;
   const total = subtotal + boxTotal + deliveryCost;
 
   // Actualizar UI
   document.getElementById("summary-subtotal").innerText = formatCOP(subtotal);
   document.getElementById("summary-boxes").innerText = formatCOP(boxTotal);
-  document.getElementById("summary-delivery").innerText = formatCOP(deliveryCost);
+  if (selectedDeliveryMethod === "pickup") {
+    document.getElementById("summary-delivery").innerText = "Gratis";
+  } else {
+    document.getElementById("summary-delivery").innerText = formatCOP(deliveryCost);
+  }
   document.getElementById("summary-total").innerText = formatCOP(total);
 
   // Renderizar la lista resumida del carrito
@@ -559,8 +612,8 @@ function submitOrder() {
     return;
   }
 
-  // 2. Validar dirección/indicaciones
-  if (!clientAddress) {
+  // 2. Validar dirección/indicaciones (solo si es Delivery)
+  if (selectedDeliveryMethod === "delivery" && !clientAddress) {
     showError("⚠️ Por favor, escribe las indicaciones o dirección para la entrega.");
     addressInput.focus();
     addressInput.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -609,13 +662,18 @@ function submitOrder() {
     }
   });
 
-  const deliveryCost = BUSINESS_SETTINGS.deliveryFee;
+  const deliveryCost = selectedDeliveryMethod === "delivery" ? BUSINESS_SETTINGS.deliveryFee : 0;
   const grandTotal = subtotal + boxTotal + deliveryCost;
 
   // Armado del mensaje de WhatsApp
   let msg = `📱 *NUEVO PEDIDO*\n`;
   msg += `-----------------------------------------\n\n`;
-  msg += `📍 *Dirección / Indicaciones:* ${clientAddress}\n`;
+  if (selectedDeliveryMethod === "delivery") {
+    msg += `📍 *Método de Entrega:* Delivery 🛵\n`;
+    msg += `🏠 *Dirección:* ${clientAddress}\n`;
+  } else {
+    msg += `📍 *Método de Entrega:* Retiro en Tienda (Pickup) 🛍️\n`;
+  }
   if (orderNotes) {
     msg += `📝 *Instrucciones Especiales:* ${orderNotes}\n`;
   }
@@ -626,7 +684,11 @@ function submitOrder() {
   if (boxTotal > 0) {
     msg += `📦 *Cajas de Pizza:* ${formatCOP(boxTotal)}\n`;
   }
-  msg += `*Delivery:* ${formatCOP(deliveryCost)}\n`;
+  if (selectedDeliveryMethod === "delivery") {
+    msg += `*Delivery:* ${formatCOP(deliveryCost)}\n`;
+  } else {
+    msg += `*Delivery:* Gratis (Retiro)\n`;
+  }
   msg += `💵 *Total a Pagar:* ${formatCOP(grandTotal)}\n\n`;
 
   // Información del método de pago
