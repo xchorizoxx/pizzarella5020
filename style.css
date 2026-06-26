@@ -402,6 +402,42 @@ body {
   width: 100%;
 }
 
+.soda-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.soda-control-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b; /* slate-500 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.soda-qty-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  width: 100%;
+}
+
+.product-item.selected .soda-qty-row {
+  border-top-color: rgba(211, 47, 47, 0.15);
+}
+
+.soda-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .flavor-selector-container {
   display: flex;
   flex-wrap: wrap;

@@ -222,18 +222,25 @@ function renderDrinks() {
       });
 
       controlsHtml = `
-        <div class="controls-row">
+        <div class="soda-control-group">
+          <span class="soda-control-label">Tamaño:</span>
           <div class="size-selector soda-sizes">
             ${sizeButtonsHtml}
           </div>
+        </div>
+        <div class="soda-control-group">
+          <span class="soda-control-label">Sabor:</span>
+          <div class="flavor-selector-container">
+            ${flavorButtonsHtml}
+          </div>
+        </div>
+        <div class="soda-qty-row">
+          <span class="soda-control-label">Cantidad:</span>
           <div class="qty-controller">
             <button type="button" class="btn-qty btn-minus" data-id="${drink.id}">-</button>
             <span class="qty-val" id="qty-val-${drink.id}">0</span>
             <button type="button" class="btn-qty btn-plus" data-id="${drink.id}">+</button>
           </div>
-        </div>
-        <div class="flavor-selector-container">
-          ${flavorButtonsHtml}
         </div>
       `;
     } else {
