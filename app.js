@@ -673,10 +673,14 @@ function updateTotals() {
   // Actualizar UI
   document.getElementById("summary-subtotal").innerText = formatCOP(subtotal);
   document.getElementById("summary-boxes").innerText = formatCOP(boxTotal);
+  const deliveryLabel = document.getElementById("summary-delivery-label");
+  const deliveryVal = document.getElementById("summary-delivery");
   if (selectedDeliveryMethod === "pickup") {
-    document.getElementById("summary-delivery").innerText = "Gratis";
+    if (deliveryLabel) deliveryLabel.innerText = "Entrega: Retiro en tienda";
+    if (deliveryVal) deliveryVal.innerText = formatCOP(0);
   } else {
-    document.getElementById("summary-delivery").innerText = formatCOP(deliveryCost);
+    if (deliveryLabel) deliveryLabel.innerText = "Entrega: Delivery";
+    if (deliveryVal) deliveryVal.innerText = formatCOP(deliveryCost);
   }
   document.getElementById("summary-total").innerText = formatCOP(total);
   // Renderizar la lista resumida del carrito
@@ -783,9 +787,9 @@ function submitOrder() {
     msg += `📦 *Cajas de Pizza:* ${formatCOP(boxTotal)}\n`;
   }
   if (selectedDeliveryMethod === "delivery") {
-    msg += `*Delivery:* ${formatCOP(deliveryCost)}\n`;
+    msg += `*Entrega: Delivery:* ${formatCOP(deliveryCost)}\n`;
   } else {
-    msg += `*Delivery:* Gratis (Retiro)\n`;
+    msg += `*Entrega: Retiro en tienda:* ${formatCOP(0)}\n`;
   }
   msg += `💵 *Total a Pagar:* ${formatCOP(grandTotal)}\n\n`;
 
