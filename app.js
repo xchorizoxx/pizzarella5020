@@ -214,12 +214,16 @@ function renderPizzas() {
           `;
         });
 
+        const toppings = cardToppings[pizza.id] || [];
+        const hasToppings = toppings.length > 0;
+        const badgeHtml = hasToppings ? `<span class="toppings-count-badge">+${toppings.length}</span>` : "";
+
         controlsHtml = `
           <div class="size-selector">
             ${sizeButtonsHtml}
           </div>
           <div class="pizza-actions-stacked">
-            <button type="button" class="btn-toggle-toppings" data-id="${pizza.id}">🧀 Extras</button>
+            <button type="button" class="btn-toggle-toppings" data-id="${pizza.id}">🧀 Extras${badgeHtml}</button>
             <button type="button" class="btn-add-to-cart" data-id="${pizza.id}">Agregar 😋</button>
           </div>
         `;
@@ -240,6 +244,10 @@ function renderPizzas() {
       const toppingsPrice = getToppingsPrice(cardToppings[pizza.id] || []);
       const totalPrice = basePrice + toppingsPrice;
 
+      const toppings = cardToppings[pizza.id] || [];
+      const hasToppings = toppings.length > 0;
+      const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${t}</span>`).join("");
+
       const pizzaHtml = `
         <div class="product-item" id="product-${pizza.id}">
           <div class="product-top-row">
@@ -250,6 +258,9 @@ function renderPizzas() {
               <h3 class="product-name">${pizza.name}</h3>
               <p class="product-description">${pizza.description}</p>
               <span class="product-price-label" id="price-label-${pizza.id}">${formatCOP(totalPrice)}</span>
+              <div class="selected-toppings-list" id="toppings-list-${pizza.id}" style="${hasToppings ? 'display: flex;' : 'display: none;'}">
+                ${toppingsHtml}
+              </div>
             </div>
           </div>
           <div class="product-controls">
@@ -315,6 +326,11 @@ function renderHalfPizzaBuilder() {
     priceText = formatCOP(totalPrice);
   }
 
+  const toppings = cardToppings["half-pizza"] || [];
+  const hasToppings = toppings.length > 0;
+  const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${t}</span>`).join("");
+  const badgeHtml = hasToppings ? `<span class="toppings-count-badge">+${toppings.length}</span>` : "";
+
   // Helpful usage tip
   const builderDescription = `
     <p class="step-help-text" style="margin-top: 8px; margin-bottom: 12px;">
@@ -351,12 +367,15 @@ function renderHalfPizzaBuilder() {
       </div>
 
       <div class="half-pizza-footer" style="display: flex; flex-direction: column; gap: 12px; align-items: stretch; border-top: 1px dashed rgba(211, 47, 47, 0.2); padding-top: 14px;">
+        <div class="selected-toppings-list" id="toppings-list-half-pizza" style="${hasToppings ? 'display: flex;' : 'display: none;'}">
+          ${toppingsHtml}
+        </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted);">Precio de la Pizza:</span>
           <span class="half-pizza-price" id="half-pizza-price" style="font-size: 1.15rem; font-weight: 850; color: var(--primary);">${priceText}</span>
         </div>
         <div class="pizza-actions-container">
-          <button type="button" class="btn-toggle-toppings" data-id="half-pizza">🧀 Extras</button>
+          <button type="button" class="btn-toggle-toppings" data-id="half-pizza">🧀 Extras${badgeHtml}</button>
           <button type="button" class="btn-add-to-cart" data-id="half-pizza">Agregar 😋</button>
         </div>
       </div>
@@ -530,6 +549,42 @@ function getItemUnitPrice(parsed) {
   }
 }
 
+// Update count badge on extras button and active toppings tags on product card
+function updateToppingsFeedback(productId) {
+  if (productId === "half-pizza") return;
+
+  const toppings = cardToppings[productId] || [];
+  const hasToppings = toppings.length > 0;
+
+  // 1. Update the "🧀 Extras" button badge
+  const btn = document.querySelector(`.btn-toggle-toppings[data-id="${productId}"]`);
+  if (btn) {
+    const existingBadge = btn.querySelector(".toppings-count-badge");
+    if (existingBadge) {
+      existingBadge.remove();
+    }
+    if (hasToppings) {
+      const badge = document.createElement("span");
+      badge.className = "toppings-count-badge";
+      badge.innerText = `+${toppings.length}`;
+      btn.appendChild(badge);
+    }
+  }
+
+  // 2. Update the tags list under the price
+  const listContainer = document.getElementById(`toppings-list-${productId}`);
+  if (listContainer) {
+    if (hasToppings) {
+      const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${t}</span>`).join("");
+      listContainer.innerHTML = toppingsHtml;
+      listContainer.style.display = "flex";
+    } else {
+      listContainer.innerHTML = "";
+      listContainer.style.display = "none";
+    }
+  }
+}
+
 // Update price text on catalog item cards
 function updateCardPrice(productId) {
   const product = PRODUCTS.find(p => p.id === productId);
@@ -553,6 +608,11 @@ function updateCardPrice(productId) {
   const label = document.getElementById(`price-label-${productId}`);
   if (label) {
     label.innerText = formatCOP(totalPrice);
+  }
+
+  // Update visual feedback for toppings (badge and list of selected toppings)
+  if (product.isPizza) {
+    updateToppingsFeedback(productId);
   }
 }
 
@@ -636,7 +696,11 @@ function addProductToCart(productId) {
 function animateFlyingPizza(sourceEl) {
   if (!sourceEl) return;
 
-  const targetEl = document.getElementById("cart-items-list") || document.querySelector(".summary-card");
+  let targetEl = document.getElementById("cart-items-list");
+  // Check if target element exists and is visible, otherwise fallback to summary card
+  if (!targetEl || targetEl.style.display === "none" || targetEl.offsetHeight === 0) {
+    targetEl = document.querySelector(".summary-card");
+  }
   if (!targetEl) return;
   
   const productItem = sourceEl.closest('.product-item');
@@ -651,29 +715,39 @@ function animateFlyingPizza(sourceEl) {
     flyer.className = "flying-pizza";
     flyer.style.width = "60px";
     flyer.style.height = "60px";
+    // Ensure image retains object-fit if it had one
+    flyer.style.objectFit = "contain";
   } else {
     flyer = document.createElement("div");
     flyer.className = "flying-pizza";
     flyer.innerText = "🍕";
+    flyer.style.width = "60px";
+    flyer.style.height = "60px";
+    flyer.style.display = "flex";
+    flyer.style.justifyContent = "center";
+    flyer.style.alignItems = "center";
   }
 
-  // Position at click coordinate center
-  flyer.style.left = `${sourceRect.left + sourceRect.width / 2 - 16}px`;
-  flyer.style.top = `${sourceRect.top + sourceRect.height / 2 - 16}px`;
+  // Calculate coordinates to center the 60px flyer on the source and target elements
+  const sourceX = sourceRect.left + sourceRect.width / 2 - 30;
+  const sourceY = sourceRect.top + sourceRect.height / 2 - 30;
+  const targetX = targetRect.left + targetRect.width / 2 - 30;
+  const targetY = targetRect.top + targetRect.height / 2 - 30;
+
+  // Set position and animation parameters as CSS custom properties
+  flyer.style.left = `${sourceX}px`;
+  flyer.style.top = `${sourceY}px`;
+  flyer.style.setProperty('--tx', `${targetX - sourceX}px`);
+  flyer.style.setProperty('--ty', `${targetY - sourceY}px`);
 
   document.body.appendChild(flyer);
 
-  requestAnimationFrame(() => {
-    const targetX = targetRect.left + targetRect.width / 2 - 16;
-    const targetY = targetRect.top + targetRect.height / 2 - 16;
-
-    flyer.style.transform = `translate(${targetX - (sourceRect.left + sourceRect.width / 2 - 16)}px, ${targetY - (sourceRect.top + sourceRect.height / 2 - 16)}px) scale(0.5)`;
-    flyer.style.opacity = "0";
-  });
-
+  // Clean up element after keyframe animation finishes (animation is 2s in style.css)
   setTimeout(() => {
-    flyer.remove();
-  }, 800);
+    if (flyer && flyer.parentNode) {
+      flyer.remove();
+    }
+  }, 2100);
 }
 
 // Render dynamic toppings inside the modal overlay

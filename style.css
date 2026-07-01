@@ -1293,14 +1293,74 @@ button * {
 }
 
 /* Animación de vuelo para la pizza */
+@keyframes flyToCart {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0.12);
+    opacity: 0;
+  }
+}
+
 .flying-pizza {
   position: fixed;
   z-index: 999999;
-  font-size: 2rem;
+  font-size: 2.2rem;
   pointer-events: none;
-  transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease-out;
-  transform: scale(1);
-  opacity: 1;
+  border-radius: 50%;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  animation: flyToCart 2s cubic-bezier(0.25, 1, 0.4, 1) forwards;
+}
+
+/* Badge de adicionales (Extras) */
+.toppings-count-badge {
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+/* Lista de adicionales seleccionados en la tarjeta */
+.selected-toppings-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.selected-topping-tag {
+  background-color: var(--primary-light);
+  color: var(--primary-hover);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(211, 47, 47, 0.12);
+  animation: tagFadeIn 0.2s ease-out;
+}
+
+@keyframes tagFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Centrado en computadoras */
@@ -1390,6 +1450,7 @@ button * {
     box-shadow: none;
     min-height: 100vh;
   }
+}
 
 /* --- Botones Apilados para Agregar --- */
 .pizza-actions-stacked {
@@ -1411,14 +1472,4 @@ button * {
   font-size: 0.75rem;
   border-radius: 12px;
   margin: 0;
-}
-
-/* -- Animación del Carrito -- */
-.flying-pizza {
-  position: fixed;
-  z-index: 9999;
-  border-radius: 50%;
-  transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-  pointer-events: none;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
