@@ -9,6 +9,8 @@
 
   <!-- Favicon para la pestaña del navegador -->
   <link rel="icon" type="image/png" href="logos/logo_pizzarella.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="logos/logo_pizzarella.png">
+  <meta name="theme-color" content="#d32f2f">
 
   <!-- Tipografía Premium de Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +20,7 @@
     rel="stylesheet">
 
   <!-- Enlace al archivo CSS -->
-  <link rel="stylesheet" href="style.css?v=2.6.1">
+  <link rel="stylesheet" href="style.css?v=2.7.0">
 
   <!-- GSAP para la animación del Loader Premium -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -134,6 +136,7 @@
 
     <!-- Encabezado de la tienda con logo circular -->
     <header class="app-header">
+      <h1 class="sr-only">Menú Digital — Pizzarella5020</h1>
       <div class="logo-container">
         <img src="logos/logo_pizzarella.png" alt="Pizzarella5020 Logo" class="logo-img-header">
       </div>
@@ -198,8 +201,7 @@
           <h2>¿Cómo quieres recibir tu pedido? 📍</h2>
         </div>
         <div class="step-body">
-          <div class="delivery-options-group"
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="delivery-options-group">
             <button type="button" class="btn-delivery-option active" data-method="delivery">
               <span class="payment-icon">🛵</span>
               <span class="payment-text">Delivery</span>
@@ -232,7 +234,7 @@
         </div>
 
         <!-- Lista resumida de artículos en el carrito -->
-        <div class="cart-items-list" id="cart-items-list" style="display: none;">
+        <div class="cart-items-list" id="cart-items-list" aria-live="polite" style="display: none;">
           <!-- Cargado dinámicamente con JS -->
         </div>
 
@@ -275,7 +277,7 @@
           </div>
         </div>
 
-        <div id="error-message" class="error-toast" style="display: none;">
+        <div id="error-message" class="error-toast" role="alert" aria-live="assertive" style="display: none;">
           ⚠️ Faltan datos en tu pedido.
         </div>
 
@@ -290,7 +292,7 @@
     <footer class="app-footer">
       <p>© <span id="footer-year">2026</span> - <span id="footer-business-name">Pizzarella5020</span></p>
       <p class="footer-ig">📸 Síguenos en Instagram: <a href="https://instagram.com/pizzarella5020"
-          target="_blank">@pizzarella5020</a></p>
+          target="_blank" rel="noopener noreferrer">@pizzarella5020</a></p>
     </footer>
 
   </div>
@@ -300,7 +302,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Extras e Ingredientes Adicionales 🧀</h3>
-        <button type="button" class="btn-close-modal" id="btn-close-modal">✕</button>
+        <button type="button" class="btn-close-modal" id="btn-close-modal" aria-label="Cerrar modal de extras">✕</button>
       </div>
       <div class="modal-body" id="modal-toppings-container">
         <!-- Inyectado dinámicamente con JS -->
@@ -316,8 +318,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="products.js?v=2.4.0"></script>
-  <script src="app.js?v=2.6.4"></script>
+  <script src="products.js?v=2.7.0"></script>
+  <script src="app.js?v=2.7.0"></script>
 </body>
 
 </html>

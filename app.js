@@ -1,5 +1,25 @@
 // Lógica de funcionamiento para Pizzarella5020
 
+// ============================================================
+// SECCIÓN: UTILIDADES
+// Futuro archivo: utils.js
+// ============================================================
+
+// Utilidad: Escape de HTML para prevenir inyección XSS
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Delimitador para claves del carrito (evita conflicto con nombres de productos que contengan "_")
+const CART_DELIM = "|";
+
+// ============================================================
+// SECCIÓN: ESTADO DE LA APLICACIÓN
+// Futuro archivo: cart.js (estado) + app.js (inicialización)
+// ============================================================
+
 // Estado de la aplicación
 const cart = {}; // Almacena { "cartKey": cantidad }
 const activeVariants = {}; // Almacena { "productId": "size" } o { "productId": { size: "size", flavor: "flavor" } }
@@ -20,6 +40,11 @@ let activeToppingsPizzaId = null; // ID de pizza (o 'half-pizza') para el modal 
 
 // Adicionales por pizza guardados: { "productId": ["Topping1", "Topping2"] }
 const cardToppings = {};
+
+// ============================================================
+// SECCIÓN: INICIALIZACIÓN Y CICLO DE VIDA
+// Futuro archivo: app.js (principal, slim)
+// ============================================================
 
 // Inicialización de la aplicación
 let loaderTimeout;
@@ -161,6 +186,11 @@ function formatCOP(value) {
   return `$${value.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
+// ============================================================
+// SECCIÓN: RENDERIZADO DEL DOM
+// Futuro archivo: render.js
+// ============================================================
+
 // Renderizar Pizzas (Paso 1)
 function renderPizzas() {
   const container = document.getElementById("food-container");
@@ -255,17 +285,17 @@ function renderPizzas() {
 
       const toppings = cardToppings[pizza.id] || [];
       const hasToppings = toppings.length > 0;
-      const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${t}</span>`).join("");
+      const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${escapeHtml(t)}</span>`).join("");
 
       const pizzaHtml = `
         <div class="product-item" id="product-${pizza.id}">
           <div class="product-top-row">
             <div class="product-img-frame">
-              <img src="${pizza.logo}" alt="${pizza.name}" class="product-logo-img" id="logo-${pizza.id}">
+              <img src="${escapeHtml(pizza.logo)}" alt="${escapeHtml(pizza.name)}" class="product-logo-img" id="logo-${pizza.id}">
             </div>
             <div class="product-info">
-              <h3 class="product-name">${pizza.name}</h3>
-              <p class="product-description">${pizza.description}</p>
+              <h3 class="product-name">${escapeHtml(pizza.name)}</h3>
+              <p class="product-description">${escapeHtml(pizza.description)}</p>
               <span class="product-price-label" id="price-label-${pizza.id}">${formatCOP(totalPrice)}</span>
               <div class="selected-toppings-list" id="toppings-list-${pizza.id}" style="${hasToppings ? 'display: flex;' : 'display: none;'}">
                 ${toppingsHtml}
@@ -319,7 +349,7 @@ function renderHalfPizzaBuilder() {
   pizzas.forEach(p => {
     const variant = p.variants.find(v => v.size === halfPizzaState.size);
     if (variant) {
-      const text = `${p.name.replace("Pizza ", "")} — ${formatCOP(variant.price)}`;
+      const text = `${escapeHtml(p.name.replace("Pizza ", ""))} — ${formatCOP(variant.price)}`;
       optionsHtml1 += `<option value="${p.id}" ${halfPizzaState.half1 === p.id ? 'selected' : ''}>${text}</option>`;
       optionsHtml2 += `<option value="${p.id}" ${halfPizzaState.half2 === p.id ? 'selected' : ''}>${text}</option>`;
     }
@@ -337,7 +367,7 @@ function renderHalfPizzaBuilder() {
 
   const toppings = cardToppings["half-pizza"] || [];
   const hasToppings = toppings.length > 0;
-  const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${t}</span>`).join("");
+  const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${escapeHtml(t)}</span>`).join("");
   const badgeHtml = hasToppings ? `<span class="toppings-count-badge">+${toppings.length}</span>` : "";
 
   // Helpful usage tip
@@ -362,14 +392,14 @@ function renderHalfPizzaBuilder() {
 
       <div class="half-pizza-selectors">
         <div class="half-pizza-select-group">
-          <label>🔴 Mitad 1</label>
-          <select id="half-pizza-select-1">
+          <label for="half-pizza-select-1">🔴 Mitad 1</label>
+          <select id="half-pizza-select-1" aria-label="Seleccionar pizza para mitad 1">
             ${optionsHtml1}
           </select>
         </div>
         <div class="half-pizza-select-group">
-          <label>🟡 Mitad 2</label>
-          <select id="half-pizza-select-2">
+          <label for="half-pizza-select-2">🟡 Mitad 2</label>
+          <select id="half-pizza-select-2" aria-label="Seleccionar pizza para mitad 2">
             ${optionsHtml2}
           </select>
         </div>
@@ -392,16 +422,10 @@ function renderHalfPizzaBuilder() {
   `;
 }
 
-// Get the price of the current half pizza selection
-function getHalfPizzaPrice() {
-  if (!halfPizzaState.half1 || !halfPizzaState.half2) {
-    return "Elige ambas mitades";
-  }
-
-  const price = calculateHalfPizzaPrice(halfPizzaState.half1, halfPizzaState.half2, halfPizzaState.size);
-  if (price === null) return "N/A";
-  return formatCOP(price);
-}
+// ============================================================
+// SECCIÓN: LÓGICA DEL CARRITO Y PRECIOS
+// Futuro archivo: cart.js
+// ============================================================
 
 // Calculate base half pizza price (rounded to nearest thousand)
 function calculateHalfPizzaPrice(pizzaIdA, pizzaIdB, size) {
@@ -440,7 +464,7 @@ function updateHalfPizzaPrice() {
 // Generate unique ordered cart key for half-pizzas
 function getHalfPizzaCartKey(half1, half2, size) {
   const sorted = [half1, half2].sort();
-  return `half_${size}_${sorted[0]}_${sorted[1]}`;
+  return `half${CART_DELIM}${size}${CART_DELIM}${sorted[0]}${CART_DELIM}${sorted[1]}`;
 }
 
 // Toppings layout icons
@@ -472,15 +496,15 @@ function getToppingsPrice(toppingsArray) {
 
 // Parse cart key into clean structured object
 function parseCartKey(key) {
-  const parts = key.split("_");
+  const parts = key.split(CART_DELIM);
   
-  if (key.startsWith("half_")) {
+  if (parts[0] === "half") {
     const size = parts[1];
     const pizzaA = parts[2];
     const pizzaB = parts[3];
     let toppings = [];
-    if (key.includes("_toppings_")) {
-      const toppingsIndex = parts.indexOf("toppings");
+    const toppingsIndex = parts.indexOf("toppings");
+    if (toppingsIndex !== -1) {
       toppings = parts.slice(toppingsIndex + 1);
     }
     return {
@@ -490,7 +514,7 @@ function parseCartKey(key) {
       pizzaB,
       toppings
     };
-  } else if (key.includes("_toppings_")) {
+  } else if (parts.indexOf("toppings") !== -1) {
     const productId = parts[0];
     const size = parts[1];
     const toppingsIndex = parts.indexOf("toppings");
@@ -584,7 +608,7 @@ function updateToppingsFeedback(productId) {
   const listContainer = document.getElementById(`toppings-list-${productId}`);
   if (listContainer) {
     if (hasToppings) {
-      const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${t}</span>`).join("");
+      const toppingsHtml = toppings.map(t => `<span class="selected-topping-tag">${TOPPING_ICONS[t] || "🔸"} ${escapeHtml(t)}</span>`).join("");
       listContainer.innerHTML = toppingsHtml;
       listContainer.style.display = "flex";
     } else {
@@ -645,9 +669,9 @@ function addProductToCart(productId) {
 
     const size = halfPizzaState.size;
     const toppings = cardToppings["half-pizza"] || [];
-    const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
+    const toppingsPart = toppings.length > 0 ? `${CART_DELIM}toppings${CART_DELIM}${toppings.slice().sort().join(CART_DELIM)}` : "";
     const sortedHalves = [halfPizzaState.half1, halfPizzaState.half2].sort();
-    const cartKey = `half_${size}_${sortedHalves[0]}_${sortedHalves[1]}${toppingsPart}`;
+    const cartKey = `half${CART_DELIM}${size}${CART_DELIM}${sortedHalves[0]}${CART_DELIM}${sortedHalves[1]}${toppingsPart}`;
 
     cart[cartKey] = (cart[cartKey] || 0) + 1;
 
@@ -679,22 +703,22 @@ function addProductToCart(productId) {
   if (product.isPizza) {
     const size = activeVariants[productId] || "PEQ";
     const toppings = cardToppings[productId] || [];
-    const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
-    cartKey = `${productId}_${size}${toppingsPart}`;
+    const toppingsPart = toppings.length > 0 ? `${CART_DELIM}toppings${CART_DELIM}${toppings.slice().sort().join(CART_DELIM)}` : "";
+    cartKey = `${productId}${CART_DELIM}${size}${toppingsPart}`;
 
     cardToppings[productId] = [];
   } else if (product.id === "conopizza") {
     const toppings = cardToppings[productId] || [];
-    const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
-    cartKey = `${productId}_DEFAULT${toppingsPart}`;
+    const toppingsPart = toppings.length > 0 ? `${CART_DELIM}toppings${CART_DELIM}${toppings.slice().sort().join(CART_DELIM)}` : "";
+    cartKey = `${productId}${CART_DELIM}DEFAULT${toppingsPart}`;
 
     cardToppings[productId] = [];
   } else if (product.isSoda) {
     const size = activeVariants[productId].size;
     const flavor = activeVariants[productId].flavor;
-    cartKey = `${productId}_${size}_${flavor}`;
+    cartKey = `${productId}${CART_DELIM}${size}${CART_DELIM}${flavor}`;
   } else {
-    cartKey = `${productId}_DEFAULT`;
+    cartKey = `${productId}${CART_DELIM}DEFAULT`;
   }
 
   const qtyToAdd = localDrinkQty[productId] || 1;
@@ -925,11 +949,11 @@ function renderDrinks() {
       <div class="product-item" id="product-${drink.id}">
         <div class="product-top-row">
           <div class="product-img-frame">
-            <img src="${currentLogo}" alt="${drink.name}" class="product-logo-img" id="logo-${drink.id}">
+            <img src="${escapeHtml(currentLogo)}" alt="${escapeHtml(drink.name)}" class="product-logo-img" id="logo-${drink.id}">
           </div>
           <div class="product-info">
-            <h3 class="product-name">${drink.name}</h3>
-            <p class="product-description">${drink.description}</p>
+            <h3 class="product-name">${escapeHtml(drink.name)}</h3>
+            <p class="product-description">${escapeHtml(drink.description)}</p>
             <span class="product-price-label" id="price-label-${drink.id}">${priceText}</span>
           </div>
         </div>
@@ -979,6 +1003,11 @@ function updateSodaSizesVisibility(productId) {
     }
   });
 }
+
+// ============================================================
+// SECCIÓN: EVENT LISTENERS
+// Futuro archivo: app.js (principal, slim)
+// ============================================================
 
 // Configure application event listeners
 function setupEventListeners() {
@@ -1203,6 +1232,10 @@ function setupEventListeners() {
 
 
 
+// ============================================================
+// SECCIÓN: FEEDBACK AL USUARIO (Errores / Toasts)
+// ============================================================
+
 // Display error toasts
 let errorTimeout;
 function showError(msg) {
@@ -1264,14 +1297,14 @@ function updateTotals() {
   
   document.getElementById("summary-total").innerText = formatCOP(total);
   
-  // Highlight selections in catalog cards
-  PRODUCTS.forEach(p => {
-    // Removed updateCardSelectedState
-  });
-
   // Render resumen list
   renderMiniCart();
 }
+
+// ============================================================
+// SECCIÓN: GENERACIÓN DE MENSAJE WHATSAPP
+// Futuro archivo: whatsapp.js
+// ============================================================
 
 // Validate, structure, and submit order message to WhatsApp API
 function submitOrder() {
@@ -1329,9 +1362,9 @@ function submitOrder() {
       const boxPrice = BOX_PRICES[parsed.size] || 0;
       boxTotal += boxPrice * qty;
 
-      itemsText += `• ${qty}x Media Pizza (${parsed.size}): mitad ${nameA} + mitad ${nameB}`;
+      itemsText += `• ${qty}x Media Pizza (${escapeHtml(parsed.size)}): mitad ${escapeHtml(nameA)} + mitad ${escapeHtml(nameB)}`;
       if (parsed.toppings && parsed.toppings.length > 0) {
-        itemsText += `\n   Extras: ${parsed.toppings.join(", ")}`;
+        itemsText += `\n   Extras: ${parsed.toppings.map(t => escapeHtml(t)).join(", ")}`;
       }
       itemsText += ` - _${formatCOP(rowPrice)}_\n`;
     } else if (parsed.type === "pizza") {
@@ -1341,17 +1374,17 @@ function submitOrder() {
       const boxPrice = BOX_PRICES[parsed.size] || 0;
       boxTotal += boxPrice * qty;
 
-      itemsText += `• ${qty}x Pizza ${name} (${parsed.size})`;
+      itemsText += `• ${qty}x Pizza ${escapeHtml(name)} (${escapeHtml(parsed.size)})`;
       if (parsed.toppings && parsed.toppings.length > 0) {
-        itemsText += `\n   Extras: ${parsed.toppings.join(", ")}`;
+        itemsText += `\n   Extras: ${parsed.toppings.map(t => escapeHtml(t)).join(", ")}`;
       }
       itemsText += ` - _${formatCOP(rowPrice)}_\n`;
     } else if (parsed.type === "soda") {
-      itemsText += `• ${qty}x Refresco ${parsed.flavor} (${parsed.size}) - _${formatCOP(rowPrice)}_\n`;
+      itemsText += `• ${qty}x Refresco ${escapeHtml(parsed.flavor)} (${escapeHtml(parsed.size)}) - _${formatCOP(rowPrice)}_\n`;
     } else {
       const p = PRODUCTS.find(p => p.id === parsed.productId);
       const name = p ? p.name : parsed.productId;
-      itemsText += `• ${qty}x ${name} - _${formatCOP(rowPrice)}_\n`;
+      itemsText += `• ${qty}x ${escapeHtml(name)} - _${formatCOP(rowPrice)}_\n`;
     }
   });
 
@@ -1405,6 +1438,11 @@ function submitOrder() {
   window.location.href = whatsappUrl;
 }
 
+// ============================================================
+// SECCIÓN: RENDERIZADO DEL MINI-CARRITO (RESUMEN)
+// Futuro archivo: render.js
+// ============================================================
+
 // Render dynamic Resumen mini-cart list
 function renderMiniCart() {
   const container = document.getElementById("cart-items-list");
@@ -1429,22 +1467,22 @@ function renderMiniCart() {
       const pB = PRODUCTS.find(p => p.id === parsed.pizzaB);
       const nameA = pA ? pA.name.replace("Pizza ", "") : parsed.pizzaA;
       const nameB = pB ? pB.name.replace("Pizza ", "") : parsed.pizzaB;
-      title = `${qty}x Mitad ${nameA} / Mitad ${nameB} (${parsed.size})`;
+      title = `${qty}x Mitad ${escapeHtml(nameA)} / Mitad ${escapeHtml(nameB)} (${escapeHtml(parsed.size)})`;
       if (parsed.toppings && parsed.toppings.length > 0) {
-        extrasText = `<div class="cart-item-extras" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-weight: 500;">Extras: ${parsed.toppings.join(", ")}</div>`;
+        extrasText = `<div class="cart-item-extras">Extras: ${parsed.toppings.map(t => escapeHtml(t)).join(", ")}</div>`;
       }
     } else if (parsed.type === "pizza") {
       const p = PRODUCTS.find(p => p.id === parsed.productId);
       const name = p ? p.name.replace("Pizza ", "") : parsed.productId;
-      title = `${qty}x Pizza ${name} (${parsed.size})`;
+      title = `${qty}x Pizza ${escapeHtml(name)} (${escapeHtml(parsed.size)})`;
       if (parsed.toppings && parsed.toppings.length > 0) {
-        extrasText = `<div class="cart-item-extras" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-weight: 500;">Extras: ${parsed.toppings.join(", ")}</div>`;
+        extrasText = `<div class="cart-item-extras">Extras: ${parsed.toppings.map(t => escapeHtml(t)).join(", ")}</div>`;
       }
     } else if (parsed.type === "soda") {
-      title = `${qty}x Refresco ${parsed.flavor} (${parsed.size})`;
+      title = `${qty}x Refresco ${escapeHtml(parsed.flavor)} (${escapeHtml(parsed.size)})`;
     } else {
       const p = PRODUCTS.find(p => p.id === parsed.productId);
-      title = p ? `${qty}x ${p.name}` : `${qty}x ${parsed.productId}`;
+      title = p ? `${qty}x ${escapeHtml(p.name)}` : `${qty}x ${escapeHtml(parsed.productId)}`;
     }
 
     const unitPrice = getItemUnitPrice(parsed);
@@ -1458,7 +1496,7 @@ function renderMiniCart() {
         </div>
         <div class="cart-item-right">
           <span class="cart-item-price">${formatCOP(rowPrice)}</span>
-          <button type="button" class="btn-delete-item" data-key="${key}" title="Eliminar del pedido">🗑️</button>
+          <button type="button" class="btn-delete-item" data-key="${key}" title="Eliminar del pedido" aria-label="Eliminar del pedido">🗑️</button>
         </div>
       </div>
     `;
@@ -1472,6 +1510,11 @@ function renderMiniCart() {
     container.style.display = "none";
   }
 }
+
+// ============================================================
+// SECCIÓN: ANIMACIONES
+// Futuro archivo: animations.js
+// ============================================================
 
 // Inicializar la animación de carga premium de la pizza (con GSAP)
 function initPizzaLoader() {
