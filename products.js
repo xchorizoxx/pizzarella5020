@@ -35,12 +35,11 @@ const TOPPINGS = {
 
 // Sabores de refrescos disponibles con tamaños permitidos
 const SODA_FLAVORS = [
-  { name: "Coca-Cola", logo: "logos/soda_3.png", allowedSizes: ["1L", "1.5L", "2L"] },
-  { name: "Pepsi", logo: "logos/soda_5.png", allowedSizes: ["1L", "1.5L", "2L", "2.5L"] },
-  { name: "Colita", logo: "logos/soda_11.png", allowedSizes: ["1L", "1.5L", "2L"] },
-  { name: "Manzana", logo: "logos/soda_7.png", allowedSizes: ["1L", "1.5L", "2L"] },
-  { name: "Piña", logo: "logos/soda_12.png", allowedSizes: ["1L", "1.5L", "2L"] },
-  { name: "Uva", logo: "logos/soda_1.png", allowedSizes: ["1L", "1.5L", "2L"] }
+  { name: "Coca-Cola", logo: "logos/soda_3.png", allowedSizes: ["1L", "2L"] },
+  { name: "Colita", logo: "logos/soda_11.png", allowedSizes: ["1L", "2L"] },
+  { name: "Manzana", logo: "logos/soda_7.png", allowedSizes: ["1L", "2L"] },
+  { name: "Piña", logo: "logos/soda_12.png", allowedSizes: ["1L", "2L"] },
+  { name: "Uva", logo: "logos/soda_1.png", allowedSizes: ["1L", "2L"] }
 ];
 
 const PRODUCTS = [
@@ -245,9 +244,7 @@ const PRODUCTS = [
     flavors: SODA_FLAVORS,
     variants: [
       { size: "1L", label: "1L", name: "Gaseosa 1 Litro", price: 5000 },
-      { size: "1.5L", label: "1.5L", name: "Gaseosa 1.5 Litros", price: 7000 },
-      { size: "2L", label: "2L", name: "Gaseosa 2 Litros", price: 8000 },
-      { size: "2.5L", label: "2.5L", name: "Gaseosa 2.5 Litros", price: 8000 }
+      { size: "2L", label: "2L", name: "Gaseosa 2 Litros", price: 8000 }
     ]
   }
 ];

@@ -812,7 +812,7 @@ function renderDrinks() {
     if (drink.isSoda) {
       if (!activeVariants[drink.id]) {
         const defaultFlavor = (drink.flavors && drink.flavors[0]) ? drink.flavors[0].name : "Coca-Cola";
-        const defaultAllowedSizes = drink.flavors[0].allowedSizes || ["1L", "1.5L", "2L"];
+        const defaultAllowedSizes = drink.flavors[0].allowedSizes || ["1L", "2L"];
         const defaultSize = defaultAllowedSizes[0];
         activeVariants[drink.id] = { size: defaultSize, flavor: defaultFlavor };
       }
@@ -927,7 +927,7 @@ function updateSodaSizesVisibility(productId) {
   const flavorData = product.flavors.find(f => f.name === currentFlavor);
   if (!flavorData) return;
 
-  const allowedSizes = flavorData.allowedSizes || ["1L", "1.5L", "2L"];
+  const allowedSizes = flavorData.allowedSizes || ["1L", "2L"];
 
   product.variants.forEach(v => {
     const button = document.getElementById(`btn-size-${productId}-${v.size}`);
