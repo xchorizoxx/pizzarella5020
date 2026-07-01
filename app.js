@@ -229,9 +229,18 @@ function renderPizzas() {
         `;
       } else {
         // For Cono Pizza or others without size options
+        const toppings = cardToppings[pizza.id] || [];
+        const hasToppings = toppings.length > 0;
+        const badgeHtml = hasToppings ? `<span class="toppings-count-badge">+${toppings.length}</span>` : "";
+        const isConoPizza = pizza.id === "conopizza";
+        const extrasButtonHtml = isConoPizza 
+          ? `<button type="button" class="btn-toggle-toppings" data-id="${pizza.id}">🧀 Extras${badgeHtml}</button>`
+          : `<div></div>`;
+
         controlsHtml = `
           <div></div> <!-- Spacer -->
           <div class="pizza-actions-stacked">
+            ${extrasButtonHtml}
             <button type="button" class="btn-add-to-cart" data-id="${pizza.id}">Agregar 😋</button>
           </div>
         `;
@@ -597,6 +606,10 @@ function updateCardPrice(productId) {
     const basePrice = variant ? variant.price : 0;
     const toppingsPrice = getToppingsPrice(cardToppings[productId] || []);
     totalPrice = basePrice + toppingsPrice;
+  } else if (product.id === "conopizza") {
+    const basePrice = product.price || 0;
+    const toppingsPrice = getToppingsPrice(cardToppings[productId] || []);
+    totalPrice = basePrice + toppingsPrice;
   } else if (product.isSoda) {
     const size = activeVariants[productId].size;
     const variant = product.variants.find(v => v.size === size);
@@ -611,7 +624,7 @@ function updateCardPrice(productId) {
   }
 
   // Update visual feedback for toppings (badge and list of selected toppings)
-  if (product.isPizza) {
+  if (product.isPizza || product.id === "conopizza") {
     updateToppingsFeedback(productId);
   }
 }
@@ -642,6 +655,12 @@ function addProductToCart(productId) {
     const btn = document.querySelector(`.btn-add-to-cart[data-id="half-pizza"]`);
     animateFlyingPizza(btn);
 
+    const builderCard = document.querySelector(".half-pizza-builder-card");
+    if (builderCard) {
+      builderCard.classList.add("added-success-animate");
+      setTimeout(() => builderCard.classList.remove("added-success-animate"), 800);
+    }
+
     // Reset customization
     cardToppings["half-pizza"] = [];
     halfPizzaState.half1 = "";
@@ -662,6 +681,12 @@ function addProductToCart(productId) {
     const toppings = cardToppings[productId] || [];
     const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
     cartKey = `${productId}_${size}${toppingsPart}`;
+
+    cardToppings[productId] = [];
+  } else if (product.id === "conopizza") {
+    const toppings = cardToppings[productId] || [];
+    const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
+    cartKey = `${productId}_DEFAULT${toppingsPart}`;
 
     cardToppings[productId] = [];
   } else if (product.isSoda) {
@@ -686,8 +711,13 @@ function addProductToCart(productId) {
   const btn = card ? card.querySelector(".btn-add-to-cart") : null;
   animateFlyingPizza(btn);
 
-  if (product.isPizza) {
-    renderPizzas();
+  if (card) {
+    card.classList.add("added-success-animate");
+    setTimeout(() => card.classList.remove("added-success-animate"), 800);
+  }
+
+  if (product.isPizza || product.id === "conopizza") {
+    updateCardPrice(productId);
   }
   updateTotals();
 }
@@ -1163,6 +1193,12 @@ function setupEventListeners() {
   if (clientAddressInput) {
     clientAddressInput.addEventListener("input", hideErrorMessage);
   }
+
+  // 16. WhatsApp submit button
+  const btnSubmit = document.getElementById("btn-submit");
+  if (btnSubmit) {
+    btnSubmit.addEventListener("click", submitOrder);
+  }
 }
 
 
@@ -1393,22 +1429,22 @@ function renderMiniCart() {
       const pB = PRODUCTS.find(p => p.id === parsed.pizzaB);
       const nameA = pA ? pA.name.replace("Pizza ", "") : parsed.pizzaA;
       const nameB = pB ? pB.name.replace("Pizza ", "") : parsed.pizzaB;
-      title = `Mitad ${nameA} / Mitad ${nameB} (${parsed.size})`;
+      title = `${qty}x Mitad ${nameA} / Mitad ${nameB} (${parsed.size})`;
       if (parsed.toppings && parsed.toppings.length > 0) {
         extrasText = `<div class="cart-item-extras" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-weight: 500;">Extras: ${parsed.toppings.join(", ")}</div>`;
       }
     } else if (parsed.type === "pizza") {
       const p = PRODUCTS.find(p => p.id === parsed.productId);
       const name = p ? p.name.replace("Pizza ", "") : parsed.productId;
-      title = `Pizza ${name} (${parsed.size})`;
+      title = `${qty}x Pizza ${name} (${parsed.size})`;
       if (parsed.toppings && parsed.toppings.length > 0) {
         extrasText = `<div class="cart-item-extras" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-weight: 500;">Extras: ${parsed.toppings.join(", ")}</div>`;
       }
     } else if (parsed.type === "soda") {
-      title = `Refresco ${parsed.flavor} (${parsed.size})`;
+      title = `${qty}x Refresco ${parsed.flavor} (${parsed.size})`;
     } else {
       const p = PRODUCTS.find(p => p.id === parsed.productId);
-      title = p ? p.name : parsed.productId;
+      title = p ? `${qty}x ${p.name}` : `${qty}x ${parsed.productId}`;
     }
 
     const unitPrice = getItemUnitPrice(parsed);
@@ -1422,11 +1458,6 @@ function renderMiniCart() {
         </div>
         <div class="cart-item-right">
           <span class="cart-item-price">${formatCOP(rowPrice)}</span>
-          <div class="qty-controller mini-qty" style="display: flex; align-items: center; background-color: #e2e8f0; border-radius: 50px; padding: 2px; gap: 2px;">
-            <button type="button" class="btn-qty btn-minus-mini" data-key="${key}">-</button>
-            <span class="qty-val" style="font-size: 0.85rem; font-weight: 800; min-width: 20px; text-align: center;">${qty}</span>
-            <button type="button" class="btn-qty btn-plus-mini" data-key="${key}">+</button>
-          </div>
           <button type="button" class="btn-delete-item" data-key="${key}" title="Eliminar del pedido">🗑️</button>
         </div>
       </div>
