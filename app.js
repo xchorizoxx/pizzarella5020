@@ -1,10 +1,25 @@
 // Lógica de funcionamiento para Pizzarella5020
 
 // Estado de la aplicación
-const cart = {}; // Almacena { "productId_variant": cantidad } o { "productId_size_flavor": cantidad }
+const cart = {}; // Almacena { "cartKey": cantidad }
 const activeVariants = {}; // Almacena { "productId": "size" } o { "productId": { size: "size", flavor: "flavor" } }
 let selectedCurrency = "COP";
 let selectedDeliveryMethod = "delivery";
+const localDrinkQty = {};
+
+// Estado del builder de medias pizzas
+let halfPizzaState = {
+  size: "MED",
+  half1: "",
+  half2: ""
+};
+
+// Adicionales seleccionados temporalmente en el modal
+let tempSelectedToppings = [];
+let activeToppingsPizzaId = null; // ID de pizza (o 'half-pizza') para el modal abierto
+
+// Adicionales por pizza guardados: { "productId": ["Topping1", "Topping2"] }
+const cardToppings = {};
 
 // Inicialización de la aplicación
 let loaderTimeout;
@@ -36,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Renderizar catálogo
   renderPizzas();
+  renderHalfPizzaBuilder();
   renderDrinks();
 
   // Escuchadores de eventos
@@ -145,15 +161,16 @@ function formatCOP(value) {
   return `$${value.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-// Renderizar Pizzas (Paso 2)
+// Renderizar Pizzas (Paso 1)
 function renderPizzas() {
   const container = document.getElementById("food-container");
+  if (!container) return;
   container.innerHTML = "";
 
-  // Filtrar comidas (pizzas y cono pizza)
+  // Filter food items (pizzas and cono pizza)
   const allComidas = PRODUCTS.filter(p => p.category === "comida");
 
-  // Agrupar por subCategory
+  // Group by subCategory
   const groups = {
     "Básicas": { title: "🍕 Pizzas Básicas", items: [] },
     "Especiales": { title: "✨ Pizzas Especiales", items: [] }
@@ -169,7 +186,7 @@ function renderPizzas() {
     const group = groups[groupKey];
     if (group.items.length === 0) return;
 
-    // Renderizar encabezado de grupo (membrete)
+    // Render group header
     container.insertAdjacentHTML("beforeend", `
       <div class="subcategory-header">
         <span>${group.title}</span>
@@ -178,17 +195,18 @@ function renderPizzas() {
 
     group.items.forEach(pizza => {
       let controlsHtml = "";
-      let badgeHtml = "";
 
       if (pizza.isPizza) {
-        // Por defecto, la variante activa inicial es la primera disponible
-        const defaultSize = pizza.variants[0].size;
-        activeVariants[pizza.id] = defaultSize;
+        // Set default variant if not set
+        if (!activeVariants[pizza.id]) {
+          activeVariants[pizza.id] = pizza.variants[0].size;
+        }
+        const activeSize = activeVariants[pizza.id];
 
-        // Construcción del selector de tamaño (P, M, F, EF)
+        // Build size buttons
         let sizeButtonsHtml = "";
         pizza.variants.forEach(v => {
-          const isActive = v.size === defaultSize ? "active" : "";
+          const isActive = v.size === activeSize ? "active" : "";
           sizeButtonsHtml += `
             <button type="button" class="btn-size ${isActive}" data-id="${pizza.id}" data-size="${v.size}">
               ${v.label}
@@ -200,30 +218,27 @@ function renderPizzas() {
           <div class="size-selector">
             ${sizeButtonsHtml}
           </div>
-          <div class="qty-controller">
-            <button type="button" class="btn-qty btn-minus" data-id="${pizza.id}">-</button>
-            <span class="qty-val" id="qty-val-${pizza.id}">0</span>
-            <button type="button" class="btn-qty btn-plus" data-id="${pizza.id}">+</button>
+          <div class="pizza-actions-stacked">
+            <button type="button" class="btn-toggle-toppings" data-id="${pizza.id}">🧀 Extras</button>
+            <button type="button" class="btn-add-to-cart" data-id="${pizza.id}">Agregar 😋</button>
           </div>
         `;
-
-        // Las etiquetas de Básica o Especial ya no se mostrarán al lado del nombre
       } else {
-        // Para cono pizza
-        activeVariants[pizza.id] = "DEFAULT";
+        // For Cono Pizza or others without size options
         controlsHtml = `
-          <div></div> <!-- Espaciador -->
-          <div class="qty-controller">
-            <button type="button" class="btn-qty btn-minus" data-id="${pizza.id}">-</button>
-            <span class="qty-val" id="qty-val-${pizza.id}">0</span>
-            <button type="button" class="btn-qty btn-plus" data-id="${pizza.id}">+</button>
+          <div></div> <!-- Spacer -->
+          <div class="pizza-actions-stacked">
+            <button type="button" class="btn-add-to-cart" data-id="${pizza.id}">Agregar 😋</button>
           </div>
         `;
       }
 
-      const priceText = pizza.isPizza
-        ? formatCOP(pizza.variants[0].price)
-        : formatCOP(pizza.price);
+      // Calculate total card price (base price + toppings)
+      const basePrice = pizza.isPizza
+        ? pizza.variants.find(v => v.size === activeVariants[pizza.id]).price
+        : pizza.price;
+      const toppingsPrice = getToppingsPrice(cardToppings[pizza.id] || []);
+      const totalPrice = basePrice + toppingsPrice;
 
       const pizzaHtml = `
         <div class="product-item" id="product-${pizza.id}">
@@ -234,7 +249,7 @@ function renderPizzas() {
             <div class="product-info">
               <h3 class="product-name">${pizza.name}</h3>
               <p class="product-description">${pizza.description}</p>
-              <span class="product-price-label" id="price-label-${pizza.id}">${priceText}</span>
+              <span class="product-price-label" id="price-label-${pizza.id}">${formatCOP(totalPrice)}</span>
             </div>
           </div>
           <div class="product-controls">
@@ -248,9 +263,471 @@ function renderPizzas() {
   });
 }
 
-// Renderizar Bebidas (Paso 3)
+// Render half pizza builder (Mitad y Mitad)
+function renderHalfPizzaBuilder() {
+  const container = document.getElementById("half-pizza-builder");
+  if (!container) return;
+
+  const pizzas = PRODUCTS.filter(p => p.isPizza === true);
+
+  // Size buttons (MED, FAM, EXT)
+  const sizeLabels = { "MED": "M", "FAM": "F", "EXT": "EF" };
+  let sizeButtonsHtml = "";
+  HALF_PIZZA_SIZES.forEach(size => {
+    const isActive = size === halfPizzaState.size ? "active" : "";
+    sizeButtonsHtml += `
+      <button type="button" class="btn-size ${isActive}" data-half-size="${size}">
+        ${sizeLabels[size] || size}
+      </button>
+    `;
+  });
+
+  // 1. Validar que las mitades elegidas existan en el nuevo tamaño seleccionado
+  if (halfPizzaState.half1) {
+    const p1 = pizzas.find(p => p.id === halfPizzaState.half1);
+    if (!p1 || !p1.variants.find(v => v.size === halfPizzaState.size)) halfPizzaState.half1 = "";
+  }
+  if (halfPizzaState.half2) {
+    const p2 = pizzas.find(p => p.id === halfPizzaState.half2);
+    if (!p2 || !p2.variants.find(v => v.size === halfPizzaState.size)) halfPizzaState.half2 = "";
+  }
+
+  // 2. Construir options directamente con interpolación segura
+  let optionsHtml1 = `<option value="" ${!halfPizzaState.half1 ? 'selected' : ''}>-- Elige una pizza --</option>`;
+  let optionsHtml2 = `<option value="" ${!halfPizzaState.half2 ? 'selected' : ''}>-- Elige una pizza --</option>`;
+
+  pizzas.forEach(p => {
+    const variant = p.variants.find(v => v.size === halfPizzaState.size);
+    if (variant) {
+      const text = `${p.name.replace("Pizza ", "")} — ${formatCOP(variant.price)}`;
+      optionsHtml1 += `<option value="${p.id}" ${halfPizzaState.half1 === p.id ? 'selected' : ''}>${text}</option>`;
+      optionsHtml2 += `<option value="${p.id}" ${halfPizzaState.half2 === p.id ? 'selected' : ''}>${text}</option>`;
+    }
+  });
+
+  // Calculate current combination price (average promediado + toppings)
+  let priceText = "Elige ambas mitades";
+  let totalPrice = 0;
+  if (halfPizzaState.half1 && halfPizzaState.half2) {
+    const basePrice = calculateHalfPizzaPrice(halfPizzaState.half1, halfPizzaState.half2, halfPizzaState.size);
+    const toppingsPrice = getToppingsPrice(cardToppings["half-pizza"] || []);
+    totalPrice = (basePrice || 0) + toppingsPrice;
+    priceText = formatCOP(totalPrice);
+  }
+
+  // Helpful usage tip
+  const builderDescription = `
+    <p class="step-help-text" style="margin-top: 8px; margin-bottom: 12px;">
+      💡 El precio se calcula promediando el costo de ambas mitades al millar más cercano. Agrega adicionales en "🧀 Extras" si lo deseas.
+    </p>
+  `;
+
+  container.innerHTML = `
+    <div class="half-pizza-builder-card">
+      <div class="half-pizza-builder-header">
+        <span class="half-icon">🍕</span>
+        <h3>Arma tu Mitad y Mitad</h3>
+      </div>
+      
+      ${builderDescription}
+
+      <div class="half-pizza-size-selector">
+        ${sizeButtonsHtml}
+      </div>
+
+      <div class="half-pizza-selectors">
+        <div class="half-pizza-select-group">
+          <label>🔴 Mitad 1</label>
+          <select id="half-pizza-select-1">
+            ${optionsHtml1}
+          </select>
+        </div>
+        <div class="half-pizza-select-group">
+          <label>🟡 Mitad 2</label>
+          <select id="half-pizza-select-2">
+            ${optionsHtml2}
+          </select>
+        </div>
+      </div>
+
+      <div class="half-pizza-footer" style="display: flex; flex-direction: column; gap: 12px; align-items: stretch; border-top: 1px dashed rgba(211, 47, 47, 0.2); padding-top: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted);">Precio de la Pizza:</span>
+          <span class="half-pizza-price" id="half-pizza-price" style="font-size: 1.15rem; font-weight: 850; color: var(--primary);">${priceText}</span>
+        </div>
+        <div class="pizza-actions-container">
+          <button type="button" class="btn-toggle-toppings" data-id="half-pizza">🧀 Extras</button>
+          <button type="button" class="btn-add-to-cart" data-id="half-pizza">Agregar 😋</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Get the price of the current half pizza selection
+function getHalfPizzaPrice() {
+  if (!halfPizzaState.half1 || !halfPizzaState.half2) {
+    return "Elige ambas mitades";
+  }
+
+  const price = calculateHalfPizzaPrice(halfPizzaState.half1, halfPizzaState.half2, halfPizzaState.size);
+  if (price === null) return "N/A";
+  return formatCOP(price);
+}
+
+// Calculate base half pizza price (rounded to nearest thousand)
+function calculateHalfPizzaPrice(pizzaIdA, pizzaIdB, size) {
+  const pizzaA = PRODUCTS.find(p => p.id === pizzaIdA);
+  const pizzaB = PRODUCTS.find(p => p.id === pizzaIdB);
+  if (!pizzaA || !pizzaB) return null;
+
+  const varA = pizzaA.variants.find(v => v.size === size);
+  const varB = pizzaB.variants.find(v => v.size === size);
+  if (!varA || !varB) return null;
+
+  const avg = (varA.price + varB.price) / 2;
+  return Math.round(avg / 1000) * 1000;
+}
+
+// Update builder subtotal display
+function updateHalfPizzaPrice() {
+  const priceEl = document.getElementById("half-pizza-price");
+  if (!priceEl) return;
+
+  let priceText = "Elige ambas mitades";
+  if (halfPizzaState.half1 && halfPizzaState.half2) {
+    const basePrice = calculateHalfPizzaPrice(halfPizzaState.half1, halfPizzaState.half2, halfPizzaState.size);
+    const toppingsPrice = getToppingsPrice(cardToppings["half-pizza"] || []);
+    priceText = formatCOP((basePrice || 0) + toppingsPrice);
+  }
+  priceEl.innerText = priceText;
+
+  // Add updated flash animation
+  priceEl.classList.add("price-updated");
+  setTimeout(() => {
+    priceEl.classList.remove("price-updated");
+  }, 300);
+}
+
+// Generate unique ordered cart key for half-pizzas
+function getHalfPizzaCartKey(half1, half2, size) {
+  const sorted = [half1, half2].sort();
+  return `half_${size}_${sorted[0]}_${sorted[1]}`;
+}
+
+// Toppings layout icons
+const TOPPING_ICONS = {
+  "Aceitunas": "🫒",
+  "Maíz": "🌽",
+  "Champiñones": "🍄",
+  "Anchoas": "🐟",
+  "Jamón": "🥓",
+  "Salami": "🍖",
+  "Pepperoni": "🔴",
+  "Tocineta": "🥩",
+  "Pollo": "🍗"
+};
+
+// Calculate cost of an array of toppings
+function getToppingsPrice(toppingsArray) {
+  if (!toppingsArray || toppingsArray.length === 0) return 0;
+  let total = 0;
+  toppingsArray.forEach(topping => {
+    if (TOPPINGS.basicos.items.includes(topping)) {
+      total += TOPPINGS.basicos.price;
+    } else if (TOPPINGS.especiales.items.includes(topping)) {
+      total += TOPPINGS.especiales.price;
+    }
+  });
+  return total;
+}
+
+// Parse cart key into clean structured object
+function parseCartKey(key) {
+  const parts = key.split("_");
+  
+  if (key.startsWith("half_")) {
+    const size = parts[1];
+    const pizzaA = parts[2];
+    const pizzaB = parts[3];
+    let toppings = [];
+    if (key.includes("_toppings_")) {
+      const toppingsIndex = parts.indexOf("toppings");
+      toppings = parts.slice(toppingsIndex + 1);
+    }
+    return {
+      type: "half",
+      size,
+      pizzaA,
+      pizzaB,
+      toppings
+    };
+  } else if (key.includes("_toppings_")) {
+    const productId = parts[0];
+    const size = parts[1];
+    const toppingsIndex = parts.indexOf("toppings");
+    const toppings = parts.slice(toppingsIndex + 1);
+    return {
+      type: "pizza",
+      productId,
+      size,
+      toppings
+    };
+  } else {
+    const productId = parts[0];
+    const product = PRODUCTS.find(p => p.id === productId);
+    if (!product) return null;
+    
+    if (product.isPizza) {
+      const size = parts[1];
+      return {
+        type: "pizza",
+        productId,
+        size,
+        toppings: []
+      };
+    } else if (product.isSoda) {
+      const size = parts[1];
+      const flavor = parts[2];
+      return {
+        type: "soda",
+        productId,
+        size,
+        flavor
+      };
+    } else {
+      return {
+        type: "other",
+        productId
+      };
+    }
+  }
+}
+
+// Get unit price of parsed cart item
+function getItemUnitPrice(parsed) {
+  if (!parsed) return 0;
+  
+  if (parsed.type === "half") {
+    const basePrice = calculateHalfPizzaPrice(parsed.pizzaA, parsed.pizzaB, parsed.size);
+    const toppingsPrice = getToppingsPrice(parsed.toppings);
+    return (basePrice || 0) + toppingsPrice;
+  } else if (parsed.type === "pizza") {
+    const product = PRODUCTS.find(p => p.id === parsed.productId);
+    if (!product) return 0;
+    const variant = product.variants.find(v => v.size === parsed.size);
+    const basePrice = variant ? variant.price : 0;
+    const toppingsPrice = getToppingsPrice(parsed.toppings);
+    return basePrice + toppingsPrice;
+  } else if (parsed.type === "soda") {
+    const product = PRODUCTS.find(p => p.id === parsed.productId);
+    if (!product) return 0;
+    const variant = product.variants.find(v => v.size === parsed.size);
+    return variant ? variant.price : 0;
+  } else {
+    const product = PRODUCTS.find(p => p.id === parsed.productId);
+    return product ? (product.price || 0) : 0;
+  }
+}
+
+// Update price text on catalog item cards
+function updateCardPrice(productId) {
+  const product = PRODUCTS.find(p => p.id === productId);
+  if (!product) return;
+
+  let totalPrice = 0;
+  if (product.isPizza) {
+    const size = activeVariants[productId] || "PEQ";
+    const variant = product.variants.find(v => v.size === size);
+    const basePrice = variant ? variant.price : 0;
+    const toppingsPrice = getToppingsPrice(cardToppings[productId] || []);
+    totalPrice = basePrice + toppingsPrice;
+  } else if (product.isSoda) {
+    const size = activeVariants[productId].size;
+    const variant = product.variants.find(v => v.size === size);
+    totalPrice = variant ? variant.price : 0;
+  } else {
+    totalPrice = product.price || 0;
+  }
+
+  const label = document.getElementById(`price-label-${productId}`);
+  if (label) {
+    label.innerText = formatCOP(totalPrice);
+  }
+}
+
+// Add catalog selection to cart
+function addProductToCart(productId) {
+  if (productId === "half-pizza") {
+    if (!halfPizzaState.half1 || !halfPizzaState.half2) {
+      showError("⚠️ Selecciona ambas mitades antes de agregar.");
+      return;
+    }
+
+    const basePrice = calculateHalfPizzaPrice(halfPizzaState.half1, halfPizzaState.half2, halfPizzaState.size);
+    if (basePrice === null) {
+      showError("⚠️ Una de las pizzas no está disponible en este tamaño.");
+      return;
+    }
+
+    const size = halfPizzaState.size;
+    const toppings = cardToppings["half-pizza"] || [];
+    const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
+    const sortedHalves = [halfPizzaState.half1, halfPizzaState.half2].sort();
+    const cartKey = `half_${size}_${sortedHalves[0]}_${sortedHalves[1]}${toppingsPart}`;
+
+    cart[cartKey] = (cart[cartKey] || 0) + 1;
+
+    // Animate
+    const btn = document.querySelector(`.btn-add-to-cart[data-id="half-pizza"]`);
+    animateFlyingPizza(btn);
+
+    // Reset customization
+    cardToppings["half-pizza"] = [];
+    halfPizzaState.half1 = "";
+    halfPizzaState.half2 = "";
+
+    renderHalfPizzaBuilder();
+    updateTotals();
+    return;
+  }
+
+  const product = PRODUCTS.find(p => p.id === productId);
+  if (!product) return;
+
+  let cartKey = "";
+
+  if (product.isPizza) {
+    const size = activeVariants[productId] || "PEQ";
+    const toppings = cardToppings[productId] || [];
+    const toppingsPart = toppings.length > 0 ? `_toppings_${toppings.slice().sort().join("_")}` : "";
+    cartKey = `${productId}_${size}${toppingsPart}`;
+
+    cardToppings[productId] = [];
+  } else if (product.isSoda) {
+    const size = activeVariants[productId].size;
+    const flavor = activeVariants[productId].flavor;
+    cartKey = `${productId}_${size}_${flavor}`;
+  } else {
+    cartKey = `${productId}_DEFAULT`;
+  }
+
+  const qtyToAdd = localDrinkQty[productId] || 1;
+  cart[cartKey] = (cart[cartKey] || 0) + qtyToAdd;
+  
+  if (localDrinkQty[productId]) {
+    localDrinkQty[productId] = 1;
+    const el = document.getElementById(`local-qty-val-${productId}`);
+    if (el) el.innerText = "1";
+  }
+
+  // Animate
+  const card = document.getElementById(`product-${productId}`);
+  const btn = card ? card.querySelector(".btn-add-to-cart") : null;
+  animateFlyingPizza(btn);
+
+  if (product.isPizza) {
+    renderPizzas();
+  }
+  updateTotals();
+}
+
+// Slide pizza emoji from button to summary cart
+function animateFlyingPizza(sourceEl) {
+  if (!sourceEl) return;
+
+  const targetEl = document.getElementById("cart-items-list") || document.querySelector(".summary-card");
+  if (!targetEl) return;
+  
+  const productItem = sourceEl.closest('.product-item');
+  const imgEl = productItem ? productItem.querySelector('.product-logo-img') : null;
+
+  const sourceRect = (imgEl || sourceEl).getBoundingClientRect();
+  const targetRect = targetEl.getBoundingClientRect();
+
+  let flyer;
+  if (imgEl) {
+    flyer = imgEl.cloneNode(true);
+    flyer.className = "flying-pizza";
+    flyer.style.width = "60px";
+    flyer.style.height = "60px";
+  } else {
+    flyer = document.createElement("div");
+    flyer.className = "flying-pizza";
+    flyer.innerText = "🍕";
+  }
+
+  // Position at click coordinate center
+  flyer.style.left = `${sourceRect.left + sourceRect.width / 2 - 16}px`;
+  flyer.style.top = `${sourceRect.top + sourceRect.height / 2 - 16}px`;
+
+  document.body.appendChild(flyer);
+
+  requestAnimationFrame(() => {
+    const targetX = targetRect.left + targetRect.width / 2 - 16;
+    const targetY = targetRect.top + targetRect.height / 2 - 16;
+
+    flyer.style.transform = `translate(${targetX - (sourceRect.left + sourceRect.width / 2 - 16)}px, ${targetY - (sourceRect.top + sourceRect.height / 2 - 16)}px) scale(0.5)`;
+    flyer.style.opacity = "0";
+  });
+
+  setTimeout(() => {
+    flyer.remove();
+  }, 800);
+}
+
+// Render dynamic toppings inside the modal overlay
+function renderModalToppings() {
+  const container = document.getElementById("modal-toppings-container");
+  if (!container) return;
+
+  let html = "";
+
+  Object.keys(TOPPINGS).forEach(categoryKey => {
+    const category = TOPPINGS[categoryKey];
+    const catEmoji = categoryKey === "basicos" ? "🧀" : "⭐";
+
+    html += `
+      <div class="toppings-section">
+        <div class="topping-category-label" style="font-size: 0.82rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;">
+          ${catEmoji} ${category.label}
+        </div>
+        <div class="topping-chips-grid" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+    `;
+
+    category.items.forEach(item => {
+      const isActive = tempSelectedToppings.includes(item) ? "active" : "";
+      const icon = TOPPING_ICONS[item] || "🔸";
+
+      html += `
+        <button type="button" class="topping-chip ${isActive}" data-topping-modal="${item}">
+          <span class="topping-chip-icon">${icon}</span> ${item}
+        </button>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  updateModalSubtotal();
+}
+
+// Update modal extras subtotal
+function updateModalSubtotal() {
+  const priceEl = document.getElementById("modal-extras-price");
+  if (!priceEl) return;
+  const subtotal = getToppingsPrice(tempSelectedToppings);
+  priceEl.innerText = formatCOP(subtotal);
+}
+
+// Render Bebidas (Paso 2)
 function renderDrinks() {
   const container = document.getElementById("drinks-container");
+  if (!container) return;
   container.innerHTML = "";
 
   const drinks = PRODUCTS.filter(p => p.category === "bebida");
@@ -259,16 +736,21 @@ function renderDrinks() {
     let controlsHtml = "";
 
     if (drink.isSoda) {
-      // Por defecto, inicializamos la variante con la primera talla y sabor disponible
-      const defaultSize = (drink.variants && drink.variants[0]) ? drink.variants[0].size : "BOTELLA";
-      const defaultFlavor = (drink.flavors && drink.flavors[0]) ? drink.flavors[0].name : "Coca-Cola";
-      activeVariants[drink.id] = { size: defaultSize, flavor: defaultFlavor };
+      if (!activeVariants[drink.id]) {
+        const defaultFlavor = (drink.flavors && drink.flavors[0]) ? drink.flavors[0].name : "Coca-Cola";
+        const defaultAllowedSizes = drink.flavors[0].allowedSizes || ["1L", "1.5L", "2L"];
+        const defaultSize = defaultAllowedSizes[0];
+        activeVariants[drink.id] = { size: defaultSize, flavor: defaultFlavor };
+      }
+      
+      const activeSize = activeVariants[drink.id].size;
+      const activeFlavor = activeVariants[drink.id].flavor;
 
-      // Botones de tamaños de gaseosa (Botella, 1L, etc.) en forma de píldora
+      // Size selectors
       let sizeButtonsHtml = "";
       if (drink.variants) {
         drink.variants.forEach(v => {
-          const isActive = v.size === defaultSize ? "active" : "";
+          const isActive = v.size === activeSize ? "active" : "";
           sizeButtonsHtml += `
             <button type="button" class="btn-size ${isActive}" data-id="${drink.id}" data-size="${v.size}" id="btn-size-${drink.id}-${v.size}">
               ${v.label}
@@ -277,11 +759,11 @@ function renderDrinks() {
         });
       }
 
-      // Botones de sabores de refrescos
+      // Flavor selectors
       let flavorButtonsHtml = "";
       if (drink.flavors) {
         drink.flavors.forEach(f => {
-          const isActive = f.name === defaultFlavor ? "active" : "";
+          const isActive = f.name === activeFlavor ? "active" : "";
           flavorButtonsHtml += `
             <button type="button" class="btn-flavor ${isActive}" data-id="${drink.id}" data-flavor="${f.name}">
               ${f.name}
@@ -303,38 +785,43 @@ function renderDrinks() {
             ${flavorButtonsHtml}
           </div>
         </div>
-        <div class="soda-qty-row">
-          <span class="soda-control-label">Cantidad:</span>
+        <div class="pizza-actions-stacked" style="margin-top: 10px;">
           <div class="qty-controller">
-            <button type="button" class="btn-qty btn-minus" data-id="${drink.id}">-</button>
-            <span class="qty-val" id="qty-val-${drink.id}">0</span>
-            <button type="button" class="btn-qty btn-plus" data-id="${drink.id}">+</button>
+            <button type="button" class="btn-qty btn-local-minus" data-id="${drink.id}">-</button>
+            <span class="qty-val" id="local-qty-val-${drink.id}">${localDrinkQty[drink.id] || 1}</span>
+            <button type="button" class="btn-qty btn-local-plus" data-id="${drink.id}">+</button>
           </div>
+          <button type="button" class="btn-add-to-cart" data-id="${drink.id}">Agregar 😋</button>
         </div>
       `;
     } else {
-      // Agua u otras sin variantes
-      activeVariants[drink.id] = "DEFAULT";
+      // Water
       controlsHtml = `
         <div></div>
-        <div class="qty-controller">
-          <button type="button" class="btn-qty btn-minus" data-id="${drink.id}">-</button>
-          <span class="qty-val" id="qty-val-${drink.id}">0</span>
-          <button type="button" class="btn-qty btn-plus" data-id="${drink.id}">+</button>
+        <div class="pizza-actions-stacked">
+          <div class="qty-controller">
+            <button type="button" class="btn-qty btn-local-minus" data-id="${drink.id}">-</button>
+            <span class="qty-val" id="local-qty-val-${drink.id}">${localDrinkQty[drink.id] || 1}</span>
+            <button type="button" class="btn-qty btn-local-plus" data-id="${drink.id}">+</button>
+          </div>
+          <button type="button" class="btn-add-to-cart" data-id="${drink.id}">Agregar 😋</button>
         </div>
       `;
     }
 
-    const drinkLogo = drink.isSoda ? drink.flavors[0].logo : drink.logo;
+    const currentLogo = drink.isSoda 
+      ? (drink.flavors.find(f => f.name === activeVariants[drink.id].flavor)?.logo || drink.logo)
+      : drink.logo;
+      
     const priceText = drink.isSoda
-      ? formatCOP(drink.variants[0].price)
+      ? formatCOP(drink.variants.find(v => v.size === activeVariants[drink.id].size).price)
       : formatCOP(drink.price);
 
     const drinkHtml = `
       <div class="product-item" id="product-${drink.id}">
         <div class="product-top-row">
           <div class="product-img-frame">
-            <img src="${drinkLogo}" alt="${drink.name}" class="product-logo-img" id="logo-${drink.id}">
+            <img src="${currentLogo}" alt="${drink.name}" class="product-logo-img" id="logo-${drink.id}">
           </div>
           <div class="product-info">
             <h3 class="product-name">${drink.name}</h3>
@@ -351,178 +838,221 @@ function renderDrinks() {
     container.insertAdjacentHTML("beforeend", drinkHtml);
   });
 
-  // Actualizar visibilidad de tamaños según el sabor inicial de cada soda
+  // Init soda sizes visibility filter
   drinks.forEach(drink => {
     if (drink.isSoda) updateSodaSizesVisibility(drink.id);
   });
 }
 
-// Actualizar la visibilidad de los tamaños de gaseosa según el sabor elegido
+// Adjust drink sizes availability depending on flavor restrictions
 function updateSodaSizesVisibility(productId) {
   const product = PRODUCTS.find(p => p.id === productId);
   if (!product || !product.isSoda) return;
 
   const currentFlavor = activeVariants[productId].flavor;
-  const allowedFlavorsFor2_5L = ["Coca-Cola", "Pepsi", "Manzana"];
+  const flavorData = product.flavors.find(f => f.name === currentFlavor);
+  if (!flavorData) return;
 
-  const button2_5L = document.getElementById(`btn-size-${productId}-2.5L`);
-  if (button2_5L) {
-    if (allowedFlavorsFor2_5L.includes(currentFlavor)) {
-      button2_5L.style.display = "inline-flex";
-    } else {
-      button2_5L.style.display = "none";
-      // Si la opción seleccionada actualmente era 2.5L, la cambiamos a 2L
-      if (activeVariants[productId].size === "2.5L") {
-        const button2L = document.getElementById(`btn-size-${productId}-2L`);
-        if (button2L) {
-          button2L.click();
+  const allowedSizes = flavorData.allowedSizes || ["1L", "1.5L", "2L"];
+
+  product.variants.forEach(v => {
+    const button = document.getElementById(`btn-size-${productId}-${v.size}`);
+    if (button) {
+      if (allowedSizes.includes(v.size)) {
+        button.style.display = "inline-flex";
+      } else {
+        button.style.display = "none";
+
+        // Fallback to first allowed option if selected becomes hidden
+        if (activeVariants[productId].size === v.size) {
+          const firstAllowed = allowedSizes[0];
+          const firstButton = document.getElementById(`btn-size-${productId}-${firstAllowed}`);
+          if (firstButton) {
+            firstButton.click();
+          }
         }
       }
     }
-  }
+  });
 }
 
-// Configurar escuchadores de eventos
+// Configure application event listeners
 function setupEventListeners() {
-  // 1. Clic en los botones de tamaño (pizzas y refrescos)
+  // Single global click listener to improve performance
   document.addEventListener("click", (e) => {
+    // 1. Size buttons interactions
     const btnSize = e.target.closest(".btn-size");
-    if (btnSize) {
+    if (btnSize && !btnSize.hasAttribute("data-half-size")) {
       const productId = btnSize.getAttribute("data-id");
+      if (!productId) return;
       const size = btnSize.getAttribute("data-size");
       const product = PRODUCTS.find(p => p.id === productId);
-
-      // Quitar clase activa de los otros botones de este producto y agregar al seleccionado
       const card = document.getElementById(`product-${productId}`);
-      card.querySelectorAll(".btn-size").forEach(btn => {
-        btn.classList.remove("active");
-      });
+      if (card) {
+        card.querySelectorAll(".btn-size").forEach(btn => btn.classList.remove("active"));
+      }
       btnSize.classList.add("active");
-
-      let cartKey = "";
-      let price = 0;
-
       if (product.isPizza) {
         activeVariants[productId] = size;
-        cartKey = `${productId}_${size}`;
-        price = product.variants.find(v => v.size === size).price;
       } else if (product.isSoda) {
         activeVariants[productId].size = size;
-        const currentFlavor = activeVariants[productId].flavor;
-        cartKey = `${productId}_${size}_${currentFlavor}`;
-        price = product.variants.find(v => v.size === size).price;
+        updateSodaSizesVisibility(productId);
       }
-
-      // Actualizar precio de la tarjeta
-      document.getElementById(`price-label-${productId}`).innerText = formatCOP(price);
-
-      // Actualizar cantidad mostrada en pantalla para esta variante
-      const qty = cart[cartKey] || 0;
-      document.getElementById(`qty-val-${productId}`).innerText = qty;
-
-      updateCardSelectedState(productId);
+      updateCardPrice(productId);
+      return;
     }
-  });
 
-  // 2. Clic en los botones de sabores de refrescos
-  document.addEventListener("click", (e) => {
+    // 2. Soda flavor buttons interactions
     const btnFlavor = e.target.closest(".btn-flavor");
     if (btnFlavor) {
       const productId = btnFlavor.getAttribute("data-id");
       const flavorName = btnFlavor.getAttribute("data-flavor");
       const product = PRODUCTS.find(p => p.id === productId);
-
-      // Actualizar sabor activo
       activeVariants[productId].flavor = flavorName;
-
-      // Quitar clase activa de los otros botones de sabor de este producto y agregar al seleccionado
       const card = document.getElementById(`product-${productId}`);
-      card.querySelectorAll(".btn-flavor").forEach(btn => {
-        btn.classList.remove("active");
-      });
+      if (card) {
+        card.querySelectorAll(".btn-flavor").forEach(btn => btn.classList.remove("active"));
+      }
       btnFlavor.classList.add("active");
-
-      // Actualizar imagen del logo según el sabor elegido
       const flavorData = product.flavors.find(f => f.name === flavorName);
       if (flavorData) {
-        document.getElementById(`logo-${productId}`).src = flavorData.logo;
+        const logoEl = document.getElementById(`logo-${productId}`);
+        if (logoEl) logoEl.src = flavorData.logo;
       }
-
-      // Actualizar visibilidad de tamaños de refresco según el sabor elegido
       updateSodaSizesVisibility(productId);
-
-      // Actualizar cantidad mostrada en pantalla para este sabor y tamaño
-      const currentSize = activeVariants[productId].size;
-      const cartKey = `${productId}_${currentSize}_${flavorName}`;
-      const qty = cart[cartKey] || 0;
-      document.getElementById(`qty-val-${productId}`).innerText = qty;
-
-      updateCardSelectedState(productId);
+      updateCardPrice(productId);
+      return;
     }
-  });
 
-  // 3. Botones de + y - para agregar/quitar del carrito
-  document.addEventListener("click", (e) => {
-    const btnPlus = e.target.closest(".btn-plus");
-    const btnMinus = e.target.closest(".btn-minus");
+    // 3. Modal toppings
+    const btnToppings = e.target.closest(".btn-toggle-toppings");
+    if (btnToppings) {
+      const id = btnToppings.getAttribute("data-id");
+      activeToppingsPizzaId = id;
+      tempSelectedToppings = [...(cardToppings[id] || [])];
+      renderModalToppings();
+      const modal = document.getElementById("toppings-modal");
+      if (modal) modal.classList.add("open");
+      return;
+    }
+
+    const chip = e.target.closest(".topping-chip[data-topping-modal]");
+    if (chip) {
+      const toppingName = chip.getAttribute("data-topping-modal");
+      const index = tempSelectedToppings.indexOf(toppingName);
+      if (index === -1) {
+        tempSelectedToppings.push(toppingName);
+      } else {
+        tempSelectedToppings.splice(index, 1);
+      }
+      renderModalToppings();
+      return;
+    }
+
+    // 4. Agregar al carrito y Qty Local (+ / -)
+    const btnLocalPlus = e.target.closest(".btn-local-plus");
+    const btnLocalMinus = e.target.closest(".btn-local-minus");
+    const btnAdd = e.target.closest(".btn-add-to-cart");
+
+    if (btnLocalPlus) {
+      const id = btnLocalPlus.getAttribute("data-id");
+      localDrinkQty[id] = (localDrinkQty[id] || 1) + 1;
+      document.getElementById(`local-qty-val-${id}`).innerText = localDrinkQty[id];
+      return;
+    } else if (btnLocalMinus) {
+      const id = btnLocalMinus.getAttribute("data-id");
+      localDrinkQty[id] = Math.max(1, (localDrinkQty[id] || 1) - 1);
+      document.getElementById(`local-qty-val-${id}`).innerText = localDrinkQty[id];
+      return;
+    } else if (btnAdd) {
+      const id = btnAdd.getAttribute("data-id");
+      addProductToCart(id);
+      return;
+    }
+
+    // 5. Half-pizza builder size buttons clicks
+    const btnHalfSize = e.target.closest("[data-half-size]");
+    if (btnHalfSize) {
+      const newSize = btnHalfSize.getAttribute("data-half-size");
+      halfPizzaState.size = newSize;
+      renderHalfPizzaBuilder();
+      return;
+    }
+
+    // 6. Incremental adjustments directly inside Resumen (mini-cart)
+    const btnPlus = e.target.closest(".btn-plus-mini");
+    const btnMinus = e.target.closest(".btn-minus-mini");
+    const btnDelete = e.target.closest(".btn-delete-item");
+    
     if (btnPlus) {
-      const productId = btnPlus.getAttribute("data-id");
-      adjustQuantity(productId, 1);
+      const key = btnPlus.getAttribute("data-key");
+      if (cart[key]) {
+        cart[key]++;
+        updateTotals();
+      }
+      return;
     } else if (btnMinus) {
-      const productId = btnMinus.getAttribute("data-id");
-      adjustQuantity(productId, -1);
+      const key = btnMinus.getAttribute("data-key");
+      if (cart[key]) {
+        cart[key]--;
+        if (cart[key] <= 0) {
+          delete cart[key];
+        }
+        updateTotals();
+      }
+      return;
+    } else if (btnDelete) {
+      const key = btnDelete.getAttribute("data-key");
+      delete cart[key];
+      updateTotals();
+      return;
     }
   });
 
-  // 4. Enviar pedido
-  document.getElementById("btn-submit").addEventListener("click", submitOrder);
+  // Half-pizza builder dropdown options updates
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "half-pizza-select-1") {
+      halfPizzaState.half1 = e.target.value;
+      updateHalfPizzaPrice();
+    } else if (e.target.id === "half-pizza-select-2") {
+      halfPizzaState.half2 = e.target.value;
+      updateHalfPizzaPrice();
+    }
+  });
 
-  // 5. Ocultar errores al escribir
-  const clientAddressInput = document.getElementById("client-address");
-  if (clientAddressInput) {
-    clientAddressInput.addEventListener("input", hideErrorMessage);
+  // Modal Save/Close overlay listeners
+  const btnConfirmModal = document.getElementById("btn-confirm-modal");
+  if (btnConfirmModal) {
+    btnConfirmModal.addEventListener("click", () => {
+      cardToppings[activeToppingsPizzaId] = [...tempSelectedToppings];
+      const modal = document.getElementById("toppings-modal");
+      if (modal) modal.classList.remove("open");
+      if (activeToppingsPizzaId === "half-pizza") {
+        renderHalfPizzaBuilder();
+      } else {
+        updateCardPrice(activeToppingsPizzaId);
+      }
+    });
   }
 
-  // 6. Eliminar artículo desde la lista resumida (papelera)
-  document.addEventListener("click", (e) => {
-    const btnDelete = e.target.closest(".btn-delete-item");
-    if (btnDelete) {
-      const key = btnDelete.getAttribute("data-key");
+  const btnCloseModal = document.getElementById("btn-close-modal");
+  if (btnCloseModal) {
+    btnCloseModal.addEventListener("click", () => {
+      const modal = document.getElementById("toppings-modal");
+      if (modal) modal.classList.remove("open");
+    });
+  }
 
-      // Eliminar del carrito
-      delete cart[key];
-
-      // Buscar el ID del producto
-      const parts = key.split("_");
-      const productId = parts[0];
-      const product = PRODUCTS.find(p => p.id === productId);
-
-      // Si la variante que acabamos de borrar es la que está activa actualmente en la tarjeta del producto,
-      // actualizamos el contador en pantalla a 0
-      if (product) {
-        let activeKey = "";
-        if (product.isPizza) {
-          const size = activeVariants[productId] || "PEQ";
-          activeKey = `${productId}_${size}`;
-        } else if (product.isSoda) {
-          const size = activeVariants[productId].size;
-          const flavor = activeVariants[productId].flavor;
-          activeKey = `${productId}_${size}_${flavor}`;
-        } else {
-          activeKey = `${productId}_DEFAULT`;
-        }
-
-        if (activeKey === key) {
-          document.getElementById(`qty-val-${productId}`).innerText = "0";
-        }
+  const modalOverlay = document.getElementById("toppings-modal");
+  if (modalOverlay) {
+    modalOverlay.addEventListener("click", (e) => {
+      if (e.target === modalOverlay) {
+        modalOverlay.classList.remove("open");
       }
+    });
+  }
 
-      updateCardSelectedState(productId);
-      updateTotals();
-    }
-  });
-
-  // 7. Clic en los botones de método de pago
+  // 13. Payment method selections
   const paymentButtons = document.querySelectorAll(".btn-payment");
   paymentButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -532,7 +1062,7 @@ function setupEventListeners() {
     });
   });
 
-  // 8. Clic en los botones de método de entrega (Delivery / Pickup)
+  // 14. Delivery method selections
   const deliveryButtons = document.querySelectorAll(".btn-delivery-option");
   deliveryButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -541,72 +1071,29 @@ function setupEventListeners() {
       selectedDeliveryMethod = btn.getAttribute("data-method");
 
       const addressContainer = document.getElementById("address-container");
+      const zoneInfo = document.getElementById("delivery-zone-info");
       if (selectedDeliveryMethod === "delivery") {
-        addressContainer.style.display = "block";
+        if (addressContainer) addressContainer.style.display = "block";
+        if (zoneInfo) zoneInfo.style.display = "block";
       } else {
-        addressContainer.style.display = "none";
+        if (addressContainer) addressContainer.style.display = "none";
+        if (zoneInfo) zoneInfo.style.display = "none";
       }
 
       updateTotals();
     });
   });
-}
 
-// Modificar cantidad de la variante activa de un producto
-function adjustQuantity(productId, change) {
-  const product = PRODUCTS.find(p => p.id === productId);
-  if (!product) return;
-  let cartKey = "";
-
-  if (product.isPizza) {
-    const size = activeVariants[productId] || "PEQ";
-    cartKey = `${productId}_${size}`;
-  } else if (product.isSoda) {
-    const variantObj = activeVariants[productId] || {};
-    const size = variantObj.size || "BOTELLA";
-    const flavor = variantObj.flavor || "Coca-Cola";
-    cartKey = `${productId}_${size}_${flavor}`;
-  } else {
-    cartKey = `${productId}_DEFAULT`;
-  }
-
-  const currentQty = cart[cartKey] || 0;
-  const newQty = currentQty + change;
-
-  if (newQty <= 0) {
-    delete cart[cartKey];
-    const qtyElement = document.getElementById(`qty-val-${productId}`);
-    if (qtyElement) qtyElement.innerText = "0";
-  } else {
-    cart[cartKey] = newQty;
-    const qtyElement = document.getElementById(`qty-val-${productId}`);
-    if (qtyElement) qtyElement.innerText = newQty;
-  }
-
-  updateCardSelectedState(productId);
-  updateTotals();
-}
-
-// Actualizar si una tarjeta de producto se muestra seleccionada en el UI
-function updateCardSelectedState(productId) {
-  const card = document.getElementById(`product-${productId}`);
-  if (!card) return;
-
-  // Sumamos la cantidad de todas las variantes de este producto
-  let totalQty = 0;
-  Object.keys(cart).forEach(key => {
-    if (key.startsWith(`${productId}_`)) {
-      totalQty += cart[key];
-    }
-  });
-
-  if (totalQty > 0) {
-    card.classList.add("selected");
-  } else {
-    card.classList.remove("selected");
+  // 15. Hide error messages during input
+  const clientAddressInput = document.getElementById("client-address");
+  if (clientAddressInput) {
+    clientAddressInput.addEventListener("input", hideErrorMessage);
   }
 }
 
+
+
+// Display error toasts
 let errorTimeout;
 function showError(msg) {
   const errorMessage = document.getElementById("error-message");
@@ -624,70 +1111,59 @@ function hideErrorMessage() {
   if (errorMessage) errorMessage.style.display = "none";
 }
 
-// Calcular totales de productos, cajas y delivery
+// Recompute cart subtotal, boxes, delivery, and totals
 function updateTotals() {
   let subtotal = 0;
   let boxTotal = 0;
   let hasItems = false;
 
   Object.keys(cart).forEach(key => {
-    const parts = key.split("_");
-    const productId = parts[0];
     const qty = cart[key];
+    if (qty <= 0) return;
 
-    if (qty > 0) {
-      hasItems = true;
-      const product = PRODUCTS.find(p => p.id === productId);
+    hasItems = true;
+    const parsed = parseCartKey(key);
+    if (!parsed) return;
 
-      if (product) {
-        if (product.isPizza) {
-          const size = parts[1];
-          if (product.variants) {
-            const sizeVariant = product.variants.find(v => v.size === size);
-            if (sizeVariant) {
-              subtotal += (sizeVariant.price || 0) * qty;
-              const boxPrice = BOX_PRICES[size] || 0;
-              boxTotal += boxPrice * qty; // Cajas de pizza según tamaño
-            }
-          }
-        } else if (product.isSoda) {
-          const size = parts[1];
-          if (product.variants) {
-            const sizeVariant = product.variants.find(v => v.size === size);
-            if (sizeVariant) {
-              subtotal += (sizeVariant.price || 0) * qty;
-            }
-          }
-        } else {
-          // Agua o Cono Pizza
-          subtotal += (product.price || 0) * qty;
-        }
-      }
+    const unitPrice = getItemUnitPrice(parsed);
+    subtotal += unitPrice * qty;
+
+    // Apply pizza boxes price separately by size
+    if (parsed.type === "pizza" || parsed.type === "half") {
+      const boxPrice = BOX_PRICES[parsed.size] || 0;
+      boxTotal += boxPrice * qty;
     }
   });
 
-  // Costo del delivery
   const deliveryCost = (hasItems && selectedDeliveryMethod === "delivery") ? BUSINESS_SETTINGS.deliveryFee : 0;
   const total = subtotal + boxTotal + deliveryCost;
 
-  // Actualizar UI
+  // Update DOM totals
   document.getElementById("summary-subtotal").innerText = formatCOP(subtotal);
   document.getElementById("summary-boxes").innerText = formatCOP(boxTotal);
+  
   const deliveryLabel = document.getElementById("summary-delivery-label");
   const deliveryVal = document.getElementById("summary-delivery");
   if (selectedDeliveryMethod === "pickup") {
     if (deliveryLabel) deliveryLabel.innerText = "Entrega: Retiro en tienda";
     if (deliveryVal) deliveryVal.innerText = formatCOP(0);
   } else {
-    if (deliveryLabel) deliveryLabel.innerText = "Entrega: Delivery";
+    if (deliveryLabel) deliveryLabel.innerText = `Entrega: Delivery (${BUSINESS_SETTINGS.deliveryLabel})`;
     if (deliveryVal) deliveryVal.innerText = formatCOP(deliveryCost);
   }
+  
   document.getElementById("summary-total").innerText = formatCOP(total);
-  // Renderizar la lista resumida del carrito
+  
+  // Highlight selections in catalog cards
+  PRODUCTS.forEach(p => {
+    // Removed updateCardSelectedState
+  });
+
+  // Render resumen list
   renderMiniCart();
 }
 
-// Validar y enviar pedido a WhatsApp
+// Validate, structure, and submit order message to WhatsApp API
 function submitOrder() {
   const addressInput = document.getElementById("client-address");
   const notesInput = document.getElementById("order-notes");
@@ -695,7 +1171,7 @@ function submitOrder() {
   const clientAddress = addressInput ? addressInput.value.trim() : "";
   const orderNotes = notesInput ? notesInput.value.trim() : "";
 
-  // 1. Validar que haya productos
+  // Validate cart is not empty
   let totalItems = 0;
   Object.keys(cart).forEach(key => {
     if (cart[key] > 0) {
@@ -707,7 +1183,7 @@ function submitOrder() {
     return;
   }
 
-  // 2. Validar dirección/indicaciones (solo si es Delivery)
+  // Validate client address for Delivery method
   if (selectedDeliveryMethod === "delivery" && !clientAddress) {
     showError("⚠️ Por favor, escribe las indicaciones o dirección para la entrega.");
     if (addressInput) {
@@ -719,59 +1195,64 @@ function submitOrder() {
 
   hideErrorMessage();
 
-  // 4. Formatear mensaje
   let subtotal = 0;
   let boxTotal = 0;
   let itemsText = "";
 
   Object.keys(cart).forEach(key => {
-    const parts = key.split("_");
-    const productId = parts[0];
     const qty = cart[key];
+    if (qty <= 0) return;
 
-    const product = PRODUCTS.find(p => p.id === productId);
+    const parsed = parseCartKey(key);
+    if (!parsed) return;
 
-    if (product && qty > 0) {
-      if (product.isPizza) {
-        const size = parts[1];
-        if (product.variants) {
-          const sizeVariant = product.variants.find(v => v.size === size);
-          if (sizeVariant) {
-            const itemTotal = (sizeVariant.price || 0) * qty;
-            subtotal += itemTotal;
-            const boxPrice = BOX_PRICES[size] || 0;
-            boxTotal += boxPrice * qty;
+    const unitPrice = getItemUnitPrice(parsed);
+    const rowPrice = unitPrice * qty;
+    subtotal += rowPrice;
 
-            itemsText += `• ${qty} Pizza ${product.name.replace("Pizza ", "")} (${size}) - _${formatCOP(itemTotal)}_\n`;
-          }
-        }
-      } else if (product.isSoda) {
-        const size = parts[1];
-        const flavor = parts[2];
-        if (product.variants) {
-          const sizeVariant = product.variants.find(v => v.size === size);
-          if (sizeVariant) {
-            const itemTotal = (sizeVariant.price || 0) * qty;
-            subtotal += itemTotal;
-            itemsText += `• ${qty} Refresco ${size} (${flavor}) - _${formatCOP(itemTotal)}_\n`;
-          }
-        }
-      } else {
-        const itemTotal = (product.price || 0) * qty;
-        subtotal += itemTotal;
-        itemsText += `• ${qty} ${product.name} - _${formatCOP(itemTotal)}_\n`;
+    if (parsed.type === "half") {
+      const pA = PRODUCTS.find(p => p.id === parsed.pizzaA);
+      const pB = PRODUCTS.find(p => p.id === parsed.pizzaB);
+      const nameA = pA ? pA.name.replace("Pizza ", "") : parsed.pizzaA;
+      const nameB = pB ? pB.name.replace("Pizza ", "") : parsed.pizzaB;
+      
+      const boxPrice = BOX_PRICES[parsed.size] || 0;
+      boxTotal += boxPrice * qty;
+
+      itemsText += `• ${qty}x Media Pizza (${parsed.size}): mitad ${nameA} + mitad ${nameB}`;
+      if (parsed.toppings && parsed.toppings.length > 0) {
+        itemsText += `\n   Extras: ${parsed.toppings.join(", ")}`;
       }
+      itemsText += ` - _${formatCOP(rowPrice)}_\n`;
+    } else if (parsed.type === "pizza") {
+      const p = PRODUCTS.find(p => p.id === parsed.productId);
+      const name = p ? p.name.replace("Pizza ", "") : parsed.productId;
+      
+      const boxPrice = BOX_PRICES[parsed.size] || 0;
+      boxTotal += boxPrice * qty;
+
+      itemsText += `• ${qty}x Pizza ${name} (${parsed.size})`;
+      if (parsed.toppings && parsed.toppings.length > 0) {
+        itemsText += `\n   Extras: ${parsed.toppings.join(", ")}`;
+      }
+      itemsText += ` - _${formatCOP(rowPrice)}_\n`;
+    } else if (parsed.type === "soda") {
+      itemsText += `• ${qty}x Refresco ${parsed.flavor} (${parsed.size}) - _${formatCOP(rowPrice)}_\n`;
+    } else {
+      const p = PRODUCTS.find(p => p.id === parsed.productId);
+      const name = p ? p.name : parsed.productId;
+      itemsText += `• ${qty}x ${name} - _${formatCOP(rowPrice)}_\n`;
     }
   });
 
   const deliveryCost = selectedDeliveryMethod === "delivery" ? BUSINESS_SETTINGS.deliveryFee : 0;
   const grandTotal = subtotal + boxTotal + deliveryCost;
 
-  // Armado del mensaje de WhatsApp
+  // Build WhatsApp text body
   let msg = `📱 *NUEVO PEDIDO*\n`;
   msg += `-----------------------------------------\n\n`;
   if (selectedDeliveryMethod === "delivery") {
-    msg += `📍 *Método de Entrega:* Delivery 🛵\n`;
+    msg += `📍 *Método de Entrega:* Delivery 🛵 (${BUSINESS_SETTINGS.deliveryLabel})\n`;
     msg += `🏠 *Dirección:* ${clientAddress}\n`;
   } else {
     msg += `📍 *Método de Entrega:* Retiro en Tienda (Pickup) 🛍️\n`;
@@ -787,13 +1268,13 @@ function submitOrder() {
     msg += `📦 *Cajas de Pizza:* ${formatCOP(boxTotal)}\n`;
   }
   if (selectedDeliveryMethod === "delivery") {
-    msg += `*Entrega: Delivery:* ${formatCOP(deliveryCost)}\n`;
+    msg += `*Entrega: Delivery (${BUSINESS_SETTINGS.deliveryLabel}):* ${formatCOP(deliveryCost)}\n`;
   } else {
     msg += `*Entrega: Retiro en tienda:* ${formatCOP(0)}\n`;
   }
   msg += `💵 *Total a Pagar:* ${formatCOP(grandTotal)}\n\n`;
 
-  // Información del método de pago
+  // Payment information
   if (selectedCurrency === "COP") {
     msg += `💵 *Método de Pago:* Pesos COP\n`;
   } else if (selectedCurrency === "USD") {
@@ -807,15 +1288,14 @@ function submitOrder() {
   msg += `-----------------------------------------\n`;
   msg += `📍 *Nota:* Recuerda enviarnos tu ubicación al WhatsApp.\n`;
 
-  // Enlace y redirección
+  // Redirect to WhatsApp API endpoint
   const encodedText = encodeURIComponent(msg);
   const whatsappUrl = `https://wa.me/${BUSINESS_SETTINGS.phone}?text=${encodedText}`;
 
-  // Usar window.location.href para evitar bloqueadores de popups
   window.location.href = whatsappUrl;
 }
 
-// Renderizar la lista simplificada del carrito en el resumen (Paso 5) con la papelera
+// Render dynamic Resumen mini-cart list
 function renderMiniCart() {
   const container = document.getElementById("cart-items-list");
   if (!container) return;
@@ -828,48 +1308,55 @@ function renderMiniCart() {
     if (qty <= 0) return;
 
     hasItems = true;
-    const parts = key.split("_");
-    const productId = parts[0];
-    const product = PRODUCTS.find(p => p.id === productId);
+    const parsed = parseCartKey(key);
+    if (!parsed) return;
 
-    if (product) {
-      let desc = "";
-      let price = 0;
+    let title = "";
+    let extrasText = "";
 
-      if (product.isPizza) {
-        const size = parts[1];
-        if (product.variants) {
-          const sizeVariant = product.variants.find(v => v.size === size);
-          if (sizeVariant) {
-            desc = `${qty}x Pizza ${product.name.replace("Pizza ", "")} (${sizeVariant.size})`;
-            price = (sizeVariant.price || 0) * qty;
-          }
-        }
-      } else if (product.isSoda) {
-        const size = parts[1];
-        const flavor = parts[2];
-        if (product.variants) {
-          const sizeVariant = product.variants.find(v => v.size === size);
-          if (sizeVariant) {
-            desc = `${qty}x Refresco ${size} [${flavor}]`;
-            price = (sizeVariant.price || 0) * qty;
-          }
-        }
-      } else {
-        desc = `${qty}x ${product.name}`;
-        price = (product.price || 0) * qty;
+    if (parsed.type === "half") {
+      const pA = PRODUCTS.find(p => p.id === parsed.pizzaA);
+      const pB = PRODUCTS.find(p => p.id === parsed.pizzaB);
+      const nameA = pA ? pA.name.replace("Pizza ", "") : parsed.pizzaA;
+      const nameB = pB ? pB.name.replace("Pizza ", "") : parsed.pizzaB;
+      title = `Mitad ${nameA} / Mitad ${nameB} (${parsed.size})`;
+      if (parsed.toppings && parsed.toppings.length > 0) {
+        extrasText = `<div class="cart-item-extras" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-weight: 500;">Extras: ${parsed.toppings.join(", ")}</div>`;
       }
-
-      html += `
-        <div class="cart-item-row">
-          <span class="cart-item-desc">${desc}</span>
-          <div class="cart-item-right">
-            <span class="cart-item-price">${formatCOP(price)}</span>
-            <button type="button" class="btn-delete-item" data-key="${key}" title="Eliminar del pedido">🗑️</button>
-          </div>
-        </div>
-      `;
+    } else if (parsed.type === "pizza") {
+      const p = PRODUCTS.find(p => p.id === parsed.productId);
+      const name = p ? p.name.replace("Pizza ", "") : parsed.productId;
+      title = `Pizza ${name} (${parsed.size})`;
+      if (parsed.toppings && parsed.toppings.length > 0) {
+        extrasText = `<div class="cart-item-extras" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-weight: 500;">Extras: ${parsed.toppings.join(", ")}</div>`;
+      }
+    } else if (parsed.type === "soda") {
+      title = `Refresco ${parsed.flavor} (${parsed.size})`;
+    } else {
+      const p = PRODUCTS.find(p => p.id === parsed.productId);
+      title = p ? p.name : parsed.productId;
     }
+
+    const unitPrice = getItemUnitPrice(parsed);
+    const rowPrice = unitPrice * qty;
+
+    html += `
+      <div class="cart-item-row" data-key="${key}">
+        <div class="cart-item-info" style="display: flex; flex-direction: column; align-items: flex-start;">
+          <span class="cart-item-desc">${title}</span>
+          ${extrasText}
+        </div>
+        <div class="cart-item-right">
+          <span class="cart-item-price">${formatCOP(rowPrice)}</span>
+          <div class="qty-controller mini-qty" style="display: flex; align-items: center; background-color: #e2e8f0; border-radius: 50px; padding: 2px; gap: 2px;">
+            <button type="button" class="btn-qty btn-minus-mini" data-key="${key}">-</button>
+            <span class="qty-val" style="font-size: 0.85rem; font-weight: 800; min-width: 20px; text-align: center;">${qty}</span>
+            <button type="button" class="btn-qty btn-plus-mini" data-key="${key}">+</button>
+          </div>
+          <button type="button" class="btn-delete-item" data-key="${key}" title="Eliminar del pedido">🗑️</button>
+        </div>
+      </div>
+    `;
   });
 
   if (hasItems) {

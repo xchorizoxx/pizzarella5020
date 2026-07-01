@@ -4,25 +4,43 @@ const BUSINESS_SETTINGS = {
   name: "Pizzarella5020",
   phone: "584126514537", // <-- Número real del delivery configurado
   currency: "COP",
-  deliveryFee: 4000
+  deliveryFee: 4000,
+  deliveryLabel: "Zona Central"
 };
 
 // Precios globales de cajas de pizza según su tamaño
 const BOX_PRICES = {
-  "PEQ": 1500,
-  "MED": 1800,
-  "FAM": 2500,
-  "EXT": 2500
+  "PEQ": 2000,
+  "MED": 3000,
+  "FAM": 3000,
+  "EXT": 3000
 };
 
-// Sabores de refrescos disponibles ordenados alfabéticamente
+// Tamaños que permiten combinación de media pizza (mitad y mitad)
+const HALF_PIZZA_SIZES = ["MED", "FAM", "EXT"];
+
+// Adicionales / Toppings extra
+const TOPPINGS = {
+  basicos: {
+    price: 5000,
+    label: "Básicos ($5,000 c/u)",
+    items: ["Aceitunas", "Maíz", "Champiñones", "Anchoas", "Jamón"]
+  },
+  especiales: {
+    price: 7000,
+    label: "Especiales ($7,000 c/u)",
+    items: ["Salami", "Pepperoni", "Tocineta", "Pollo"]
+  }
+};
+
+// Sabores de refrescos disponibles con tamaños permitidos
 const SODA_FLAVORS = [
-  { name: "Coca-Cola", logo: "logos/soda_3.png" },
-  { name: "Pepsi", logo: "logos/soda_5.png" },
-  { name: "Colita", logo: "logos/soda_11.png" },
-  { name: "Manzana", logo: "logos/soda_7.png" },
-  { name: "Piña", logo: "logos/soda_12.png" },
-  { name: "Uva", logo: "logos/soda_1.png" }
+  { name: "Coca-Cola", logo: "logos/soda_3.png", allowedSizes: ["1L", "1.5L", "2L"] },
+  { name: "Pepsi", logo: "logos/soda_5.png", allowedSizes: ["1L", "1.5L", "2L", "2.5L"] },
+  { name: "Colita", logo: "logos/soda_11.png", allowedSizes: ["1L", "1.5L", "2L"] },
+  { name: "Manzana", logo: "logos/soda_7.png", allowedSizes: ["1L", "1.5L", "2L"] },
+  { name: "Piña", logo: "logos/soda_12.png", allowedSizes: ["1L", "1.5L", "2L"] },
+  { name: "Uva", logo: "logos/soda_1.png", allowedSizes: ["1L", "1.5L", "2L"] }
 ];
 
 const PRODUCTS = [
@@ -226,7 +244,6 @@ const PRODUCTS = [
     isSoda: true,
     flavors: SODA_FLAVORS,
     variants: [
-      { size: "BOTELLA", label: "Botella", name: "Botella Personal", price: 3000 },
       { size: "1L", label: "1L", name: "Gaseosa 1 Litro", price: 5000 },
       { size: "1.5L", label: "1.5L", name: "Gaseosa 1.5 Litros", price: 7000 },
       { size: "2L", label: "2L", name: "Gaseosa 2 Litros", price: 8000 },
